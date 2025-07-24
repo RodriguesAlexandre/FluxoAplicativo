@@ -72,7 +72,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSignIn, onContinueAs
                             </div>
                         ) : (
                             <>
-                                <Button size="lg" className="w-full" onClick={onSignIn} disabled={isAuthenticating || !process.env.VITE_FIREBASE_API_KEY}>
+                                <Button size="lg" className="w-full" onClick={onSignIn} disabled={isAuthenticating || !import.meta.env.VITE_FIREBASE_API_KEY}>
                                     <GoogleIcon />
                                     Entrar com o Google
                                 </Button>
