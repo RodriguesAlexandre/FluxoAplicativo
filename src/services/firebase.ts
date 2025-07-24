@@ -29,7 +29,7 @@ if (!firebaseConfig.apiKey) {
   db = {} as Firestore;
   googleProvider = {} as firebase.auth.GoogleAuthProvider;
 } else {
-  // Check if Firebase app is already initialized
+  // Check if Firebase app is already initialized to avoid errors during HMR.
   if (!firebase.apps.length) {
     app = firebase.initializeApp(firebaseConfig);
   } else {

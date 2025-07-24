@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import type firebase from 'firebase/compat/app';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/services/firebase';
-import { FinancialState } from '@/types';
-import { INITIAL_FINANCIAL_STATE, BLANK_FINANCIAL_STATE } from '@/constants';
+import { db } from '../services/firebase';
+import { FinancialState } from '../types';
+import { INITIAL_FINANCIAL_STATE, BLANK_FINANCIAL_STATE } from '../constants';
 
 const DEBOUNCE_DELAY = 1500; // 1.5 seconds
 const GUEST_STORAGE_KEY = 'fluxo-guest-financial-state';
