@@ -2,7 +2,7 @@ import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { FinancialState } from '@/types';
 
 export const getFinancialAnalysis = async (state: FinancialState): Promise<string> => {
-    const apiKey = process.env.VITE_API_KEY;
+    const apiKey = process.env.API_KEY;
 
     if (!apiKey) {
         console.warn("API_KEY environment variable not found. Oracle is in maintenance mode.");
@@ -95,7 +95,7 @@ export const getFinancialAnalysis = async (state: FinancialState): Promise<strin
 };
 
 export const getFeatureExplanation = async (question: string): Promise<string> => {
-    const apiKey = process.env.VITE_API_KEY;
+    const apiKey = process.env.API_KEY;
      if (!apiKey) {
         return "A funcionalidade de chat com o Guia está indisponível. Por favor, configure sua API Key para habilitar.";
     }
