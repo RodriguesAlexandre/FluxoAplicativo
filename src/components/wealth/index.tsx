@@ -3,9 +3,9 @@ import { FinancialState, Asset, AppView, ManualTransaction, DeficitStrategy, Sur
 import { Card, Button, Icon, Input, Modal } from '@/components/common';
 import { WealthProjectionChart } from '@/components/charts';
 import { calculateProjections } from '@/services/financialProjection';
-import { WealthSettingsModal } from './WealthSettingsModal';
-import { ContributionModal } from './ContributionModal';
-import { CoverDeficitModal } from './CoverDeficitModal';
+import { WealthSettingsModal } from '@/components/wealth/WealthSettingsModal';
+import { ContributionModal } from '@/components/wealth/ContributionModal';
+import { CoverDeficitModal } from '@/components/wealth/CoverDeficitModal';
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 

@@ -3,7 +3,7 @@ import { FinancialState, Category, Record as RecordType, AppView, MonthlyAdjustm
 import { Card, Button, Icon, Input, Modal } from '@/components/common';
 import { MonthlyCashflowChart } from '@/components/charts';
 import { calculateProjections, addMonths } from '@/services/financialProjection';
-import { DistributeBalanceModal } from './DistributeBalanceModal';
+import { DistributeBalanceModal } from '@/components/monthly/DistributeBalanceModal';
 import { WealthSettingsModal } from '@/components/wealth/WealthSettingsModal';
 
 // --- Helper Functions ---
