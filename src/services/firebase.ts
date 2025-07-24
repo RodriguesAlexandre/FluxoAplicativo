@@ -1,11 +1,10 @@
-
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 // IMPORTANT: Vite exposes environment variables on the `import.meta.env` object.
 // VITE_ is a required prefix for variables to be exposed to the client.
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
