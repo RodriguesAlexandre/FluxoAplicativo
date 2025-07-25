@@ -63,10 +63,10 @@ const RecordRow: React.FC<{
     status: 'pending' | 'confirmed';
     onUpdate: (id: string, value: number, status: 'pending' | 'confirmed') => void;
     onDelete?: (id: string) => void;
-    projectedValue: number;
+    isProjected: boolean;
     isFirst: boolean;
     isVariable: boolean;
-}> = ({ id, label, value, status, onUpdate, onDelete, projectedValue, isFirst, isVariable }) => {
+}> = ({ id, label, value, status, onUpdate, onDelete, isProjected, isFirst, isVariable }) => {
     const [inputValue, setInputValue] = useState(value.toString());
 
     useEffect(() => {
@@ -87,10 +87,9 @@ const RecordRow: React.FC<{
     };
 
     const toggleStatus = () => {
-        onUpdate(id, value ?? projectedValue ?? 0, status === 'confirmed' ? 'pending' : 'confirmed');
+        onUpdate(id, value, status === 'confirmed' ? 'pending' : 'confirmed');
     };
     
-    const isProjected = value === 0 && projectedValue > 0;
     const isConfirmed = status === 'confirmed';
 
     return (
@@ -111,8 +110,8 @@ const RecordRow: React.FC<{
                     value={inputValue}
                     onChange={handleValueChange}
                     onBlur={handleBlur}
-                    placeholder={(projectedValue || 0).toFixed(2)}
-                    className={`w-full text-right bg-transparent outline-none font-semibold ${isProjected ? 'text-gray-400 italic' : ''} ${isConfirmed ? 'opacity-60' : ''}`}
+                    placeholder="0.00"
+                    className={`w-full text-right bg-transparent outline-none font-semibold ${isProjected && !isConfirmed ? 'text-gray-400 italic' : ''} ${isConfirmed ? 'opacity-60' : ''}`}
                     aria-label={`Valor para ${label}`}
                 />
             </div>
@@ -516,14 +515,17 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                             <div className="space-y-1">
                                 {incomeCategories.map((cat, index) => {
                                     const record = state.records.find(r => r.categoryId === cat.id && r.month === currentMonth);
+                                    const projectedValue = derivedData.projectedPlaceholders.get(cat.id) || 0;
+                                    const valueToDisplay = record ? record.value : projectedValue;
+
                                     return (
                                         <RecordRow 
                                             key={cat.id} 
                                             id={cat.id}
                                             label={cat.name}
-                                            value={record?.value ?? 0}
+                                            value={valueToDisplay}
                                             status={record?.status ?? 'pending'}
-                                            projectedValue={derivedData.projectedPlaceholders.get(cat.id) || 0}
+                                            isProjected={!record}
                                             onUpdate={handleUpdateRecord}
                                             isFirst={index === 0}
                                             isVariable={false}
@@ -537,7 +539,7 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                                         label={adj.description}
                                         value={adj.value}
                                         status={adj.status}
-                                        projectedValue={0}
+                                        isProjected={false}
                                         onUpdate={handleUpdateAdjustment}
                                         onDelete={handleDeleteAdjustment}
                                         isFirst={false}
@@ -554,14 +556,16 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                             <div className="space-y-1 flex-grow">
                                 {expenseCategories.map((cat) => {
                                     const record = state.records.find(r => r.categoryId === cat.id && r.month === currentMonth);
+                                    const projectedValue = derivedData.projectedPlaceholders.get(cat.id) || 0;
+                                    const valueToDisplay = record ? record.value : projectedValue;
                                     return (
                                         <RecordRow 
                                             key={cat.id} 
                                             id={cat.id}
                                             label={cat.name}
-                                            value={record?.value ?? 0}
+                                            value={valueToDisplay}
                                             status={record?.status ?? 'pending'}
-                                            projectedValue={derivedData.projectedPlaceholders.get(cat.id) || 0} 
+                                            isProjected={!record} 
                                             onUpdate={handleUpdateRecord} 
                                             isFirst={false}
                                             isVariable={false}
@@ -575,7 +579,7 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                                         label={adj.description}
                                         value={adj.value}
                                         status={adj.status}
-                                        projectedValue={0}
+                                        isProjected={false}
                                         onUpdate={handleUpdateAdjustment}
                                         onDelete={handleDeleteAdjustment}
                                         isFirst={false}

@@ -1,5 +1,4 @@
-
-import { FinancialState } from '../types';
+import { FinancialState, Record as RecordType } from './types';
 
 export const addMonths = (dateStr: string, months: number): string => {
     const date = new Date(dateStr + '-02T00:00:00Z'); // Use UTC to avoid timezone issues
@@ -22,77 +21,94 @@ export interface FinancialProjection {
     averageFutureExpense: number;
 }
 
+const getMonthRange = (state: FinancialState): string[] => {
+    const allMonths = new Set<string>();
+    const todayMonth = new Date().toISOString().slice(0, 7);
+    
+    state.records.forEach(r => allMonths.add(r.month));
+    state.monthlyAdjustments.forEach(a => {
+        allMonths.add(a.startMonth);
+        if (a.endMonth) allMonths.add(a.endMonth);
+    });
+
+    // Add a buffer of 12 months past and 24 months future to ensure full projection
+    for (let i = -12; i < 24; i++) {
+        allMonths.add(addMonths(todayMonth, i));
+    }
+
+    if (allMonths.size === 0) {
+        allMonths.add(todayMonth);
+    }
+    
+    return Array.from(allMonths).sort((a, b) => a.localeCompare(b));
+}
+
+
 export const calculateProjections = (state: FinancialState): FinancialProjection => {
     const monthlyDetails = new Map<string, MonthlyDetail>();
     
-    const allMonthsInvolved = new Set<string>();
-    state.records.forEach(r => allMonthsInvolved.add(r.month));
-    state.monthlyAdjustments.forEach(a => {
-        allMonthsInvolved.add(a.startMonth);
-        if (a.endMonth) allMonthsInvolved.add(a.endMonth);
-    });
+    const sortedMonths = getMonthRange(state);
 
-    const todayMonth = new Date().toISOString().slice(0, 7);
-    // Project from 12 months ago to 24 months in the future to get a stable data set
-    for (let i = -12; i < 24; i++) {
-        allMonthsInvolved.add(addMonths(todayMonth, i));
-    }
-    
-    if (allMonthsInvolved.size === 0) {
-        allMonthsInvolved.add(todayMonth);
-    }
-    const sortedMonths = Array.from(allMonthsInvolved).sort((a, b) => a.localeCompare(b));
-    const firstMonth = sortedMonths[0];
-    const lastMonth = sortedMonths[sortedMonths.length - 1];
-    
-    // Pre-calculate last known values from all records for efficiency
-    const lastKnownValues = new Map<string, { value: number, month: string }>();
-    state.records.forEach(r => {
-        const existing = lastKnownValues.get(r.categoryId);
-        if (!existing || r.month > existing.month) {
-            lastKnownValues.set(r.categoryId, { value: r.value, month: r.month });
+    const recordsByMonth = new Map<string, RecordType[]>();
+    state.records.forEach(record => {
+        if (!recordsByMonth.has(record.month)) {
+            recordsByMonth.set(record.month, []);
         }
+        recordsByMonth.get(record.month)!.push(record);
     });
 
+    // A map to hold the running latest value for each fixed category.
+    const runningCategoryValues = new Map<string, number>();
+    state.categories.forEach(cat => runningCategoryValues.set(cat.id, 0));
+    
+    for (const month of sortedMonths) {
+        const projectedForMonth = new Map<string, number>();
+        const recordsForThisMonth = recordsByMonth.get(month) || [];
 
-    let monthIterator = firstMonth;
-    while(monthIterator <= lastMonth) {
+        // Update running values with any explicit records for the current month
+        recordsForThisMonth.forEach(record => {
+            runningCategoryValues.set(record.categoryId, record.value);
+        });
+
         let monthIncome = 0;
         let monthExpense = 0;
         let monthConfirmedIncome = 0;
         let monthConfirmedExpense = 0;
-        const projectedForMonth = new Map<string, number>();
 
         state.categories.forEach(cat => {
-            const record = state.records.find(r => r.categoryId === cat.id && r.month === monthIterator);
-            let value = 0;
-            
-            if (record) {
-                value = record.value;
-                if (record.status === 'confirmed') {
-                    if (cat.type === 'income') monthConfirmedIncome += value;
-                    else monthConfirmedExpense += value;
-                }
-            } else {
-                // Use projected value only for current or future months
-                if (monthIterator >= todayMonth) {
-                    value = lastKnownValues.get(cat.id)?.value ?? 0;
-                    projectedForMonth.set(cat.id, value);
-                }
-            }
+            const recordForThisMonth = recordsForThisMonth.find(r => r.categoryId === cat.id);
+            const value = runningCategoryValues.get(cat.id) || 0;
 
             if (cat.type === 'income') monthIncome += value;
             else monthExpense += value;
-        });
 
-        state.monthlyAdjustments.forEach(adj => {
-             if (monthIterator >= adj.startMonth && (!adj.endMonth || monthIterator <= adj.endMonth)) {
-                if (adj.type === 'income') monthIncome += adj.value;
-                else monthExpense += adj.value;
+            // If there is no explicit record for this month, it's a projection.
+            if (!recordForThisMonth && value !== 0) {
+                projectedForMonth.set(cat.id, value);
+            }
+
+            // Handle confirmed status from explicit record
+            if (recordForThisMonth?.status === 'confirmed') {
+                if (cat.type === 'income') monthConfirmedIncome += recordForThisMonth.value;
+                else monthConfirmedExpense += recordForThisMonth.value;
             }
         });
 
-        monthlyDetails.set(monthIterator, { 
+        // Add adjustments for the month
+        state.monthlyAdjustments.forEach(adj => {
+            if (month >= adj.startMonth && (!adj.endMonth || month <= adj.endMonth)) {
+                const value = adj.value;
+                if (adj.type === 'income') {
+                    monthIncome += value;
+                    if (adj.status === 'confirmed') monthConfirmedIncome += value;
+                } else {
+                    monthExpense += value;
+                    if (adj.status === 'confirmed') monthConfirmedExpense += value;
+                }
+            }
+        });
+        
+        monthlyDetails.set(month, { 
             income: monthIncome,
             expense: monthExpense,
             surplus: monthIncome - monthExpense,
@@ -100,11 +116,10 @@ export const calculateProjections = (state: FinancialState): FinancialProjection
             confirmedExpense: monthConfirmedExpense,
             projectedPlaceholders: projectedForMonth,
         });
-        
-        monthIterator = addMonths(monthIterator, 1);
     }
 
     // Calculate average surplus and expense for the next 12 months for wealth projection
+    const todayMonth = new Date().toISOString().slice(0, 7);
     let futureSurplusSum = 0;
     let futureExpenseSum = 0;
     for (let i = 0; i < 12; i++) {
