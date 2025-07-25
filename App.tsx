@@ -1,11 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import type firebase from 'firebase/compat/app';
 import { auth, googleProvider } from './services/firebase';
 import { useFinancialState } from './hooks/useFinancialState';
 import { useTheme } from './hooks/useTheme';
 import { AppView, FinancialState } from './types';
-import MonthlyControlView from './components/monthly/index.tsx';
-import WealthPlanningView from './components/wealth/index.tsx';
 import { OracleModal } from './components/oracle/OracleModal';
 import { Button, Icon, Modal, Spinner, Input } from './components/common/index.tsx';
 import { LoginScreen } from './components/LoginScreen';
@@ -13,6 +11,10 @@ import { BLANK_FINANCIAL_STATE } from './constants';
 import { GuideModal, GuideTab } from './components/guide/GuideModal';
 import { tourSteps } from './tourSteps';
 import { TourPopover } from './components/tour/TourPopover';
+
+// Lazy load the main views for code splitting
+const MonthlyControlView = lazy(() => import('./components/monthly/index.tsx'));
+const WealthPlanningView = lazy(() => import('./components/wealth/index.tsx'));
 
 type FirebaseUser = firebase.User;
 type Theme = 'light' | 'dark' | 'system';
@@ -125,6 +127,13 @@ const AppHeader: React.FC<{
         </header>
     );
 };
+
+// --- View Loader ---
+const ViewLoader: React.FC = () => (
+    <div className="flex-1 flex items-center justify-center">
+        <Spinner className="w-10 h-10" />
+    </div>
+);
 
 // --- Authenticated App Screen ---
 const AuthenticatedApp: React.FC<{ user: FirebaseUser, onSignOut: () => void, onLinkAccount: () => void, theme: Theme, setTheme: (t: Theme) => void }> = ({ user, onSignOut, onLinkAccount, theme, setTheme }) => {
@@ -295,26 +304,28 @@ const AuthenticatedApp: React.FC<{ user: FirebaseUser, onSignOut: () => void, on
                 theme={theme}
                 setTheme={setTheme}
             />
-            <main className="flex-1 overflow-y-auto bg-gray-100 dark:bg-gray-900">
-                {activeView === 'monthly' && (
-                    <MonthlyControlView
-                        state={isSimulating ? simulationState! : financialState}
-                        setState={isSimulating ? setSafeSimulationState : setSafeFinancialState}
-                        setAppView={setActiveView}
-                        onOpenOracle={() => setOracleOpen(true)}
-                        isSimulating={isSimulating}
-                        onStartSimulation={handleStartSimulation}
-                        onSaveChanges={handleSaveChanges}
-                        onDiscardChanges={handleDiscardChanges}
-                    />
-                )}
-                {activeView === 'wealth' && (
-                    <WealthPlanningView
-                        state={financialState}
-                        setState={setSafeFinancialState}
-                        setAppView={setActiveView}
-                    />
-                )}
+            <main className="flex-1 overflow-y-auto bg-gray-100 dark:bg-gray-900 flex flex-col">
+                <Suspense fallback={<ViewLoader />}>
+                    {activeView === 'monthly' && (
+                        <MonthlyControlView
+                            state={isSimulating ? simulationState! : financialState}
+                            setState={isSimulating ? setSafeSimulationState : setSafeFinancialState}
+                            setAppView={setActiveView}
+                            onOpenOracle={() => setOracleOpen(true)}
+                            isSimulating={isSimulating}
+                            onStartSimulation={handleStartSimulation}
+                            onSaveChanges={handleSaveChanges}
+                            onDiscardChanges={handleDiscardChanges}
+                        />
+                    )}
+                    {activeView === 'wealth' && (
+                        <WealthPlanningView
+                            state={financialState}
+                            setState={setSafeFinancialState}
+                            setAppView={setActiveView}
+                        />
+                    )}
+                </Suspense>
                  {/* Floating Action Button for Help */}
                 <Button 
                     variant="primary" 
@@ -437,9 +448,9 @@ function App() {
     const handleLinkAccount = async () => {
         if (!auth?.currentUser?.isAnonymous) return;
         try {
-            await auth.currentUser.linkWithPopup(googleProvider);
+            const result = await auth.currentUser.linkWithPopup(googleProvider);
             // Re-fetch user data or rely on onAuthStateChanged to update the UI
-            setUser({ ...auth.currentUser });
+            setUser(result.user);
         } catch (error) {
             console.error("Error linking account:", error);
             alert("Falha ao vincular conta. Se você já possui uma conta com este email, faça o logout e entre novamente com sua conta do Google.");

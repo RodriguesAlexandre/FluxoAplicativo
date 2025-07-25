@@ -1,7 +1,6 @@
-
 import React, { useState, useMemo, useCallback } from 'react';
 import { FinancialState, Asset, AppView, ManualTransaction, DeficitStrategy, SurplusAllocation } from '../../types';
-import { Card, Button, Icon, Input, Modal } from '../common/index.tsx';
+import { Card, Button, Icon, Input, Modal, EmptyState } from '../common/index.tsx';
 import { WealthProjectionChart } from '../charts/index.tsx';
 import { calculateProjections } from '../../services/financialProjection';
 import { WealthSettingsModal } from './WealthSettingsModal';
@@ -438,7 +437,7 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
                     <Card>
                         <h3 className="text-lg font-bold mb-4">Outros Ativos</h3>
                         <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
-                            {state.assets.map(asset => (
+                            {state.assets.length > 0 ? state.assets.map(asset => (
                                 <div key={asset.id} className="flex justify-between items-center group text-sm p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700/50">
                                     <span>{asset.name}</span>
                                     <div className="flex items-center gap-2">
@@ -448,9 +447,10 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
                                         </button>
                                     </div>
                                 </div>
-                            ))}
-                            {state.assets.length === 0 && (
-                                <p className="text-sm text-gray-500 text-center py-4">Nenhum ativo imobilizado registrado.</p>
+                            )) : (
+                                <EmptyState icon="database" title="Nenhum Ativo Registrado">
+                                  <p>Adicione bens como carros, imóveis, etc. para ter uma visão completa do seu patrimônio.</p>
+                                </EmptyState>
                             )}
                         </div>
                         <Button variant="secondary" size="sm" className="w-full" onClick={() => setAssetModalOpen(true)}>
@@ -460,7 +460,7 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
                      <Card>
                         <h3 className="text-lg font-bold mb-4">Últimas Transações</h3>
                         <div className="space-y-2 max-h-48 overflow-y-auto">
-                            {state.manualTransactions.slice(0, 5).map(tx => (
+                            {state.manualTransactions.length > 0 ? state.manualTransactions.slice(0, 5).map(tx => (
                                 <div key={tx.id} className="flex justify-between items-center text-sm p-1">
                                     <div>
                                         <p className="font-semibold">{tx.description}</p>
@@ -470,8 +470,11 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
                                         {tx.type === 'deposit' ? '+' : '-'} {formatCurrency(tx.amount)}
                                     </span>
                                 </div>
-                            ))}
-                            {state.manualTransactions.length === 0 && <p className="text-sm text-gray-500 text-center py-4">Nenhuma transação manual registrada.</p>}
+                            )) : (
+                                <EmptyState icon="wallet" title="Nenhuma Transação Manual">
+                                    <p>Seus depósitos e retiradas da reserva ou investimentos aparecerão aqui.</p>
+                                </EmptyState>
+                            )}
                         </div>
                     </Card>
                  </div>

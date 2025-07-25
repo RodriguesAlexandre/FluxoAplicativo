@@ -1,19 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Modal, Button, Icon, Input, Spinner } from '../common/index.tsx';
+import { Modal, Button, Icon, Input, Spinner, SimpleMarkdown } from '../common/index.tsx';
 import { getFeatureExplanation } from '../../services/geminiService';
-
-const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
-    const parts = text.split(/(\*\*.*?\*\*)/g);
-    return (
-        <p>
-            {parts.map((part, i) =>
-                part.startsWith('**') && part.endsWith('**') ?
-                <strong key={i} className="font-bold text-gray-800 dark:text-gray-100">{part.slice(2, -2)}</strong> :
-                part
-            )}
-        </p>
-    );
-};
 
 // --- Tutorial Tab ---
 const TutorialTab: React.FC<{ onStartTour: () => void; isNewUser: boolean }> = ({ onStartTour, isNewUser }) => {

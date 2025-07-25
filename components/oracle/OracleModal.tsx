@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Modal, Spinner, Button, Icon } from '../common/index.tsx';
 import { getFinancialAnalysis } from '../../services/geminiService';
@@ -10,8 +9,8 @@ interface OracleModalProps {
   state: FinancialState;
 }
 
-// A simple markdown parser for bold and lists
-const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
+// Renamed from SimpleMarkdown to be more specific to its purpose here.
+const AnalysisRenderer: React.FC<{ text: string }> = ({ text }) => {
     const sections = text.split('**').filter(s => s.trim() !== '');
 
     return (
@@ -19,7 +18,7 @@ const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
             {sections.map((section, index) => {
                 if (index % 2 === 0) {
                     // This is a title
-                    return <h3 key={index} className="font-bold text-lg mt-3 mb-1 text-gray-800 dark:text-gray-100">{section.trim()}</h3>;
+                    return <h3 key={index} className="font-bold text-lg mt-3 mb-1 text-gray-800 dark:text-gray-100">{section.trim().replace(/:$/, '')}</h3>;
                 } else {
                     // This is content for the previous title
                     const listItems = section.split(/\n-|\n\d\./).filter(s => s.trim() !== '');
@@ -82,7 +81,7 @@ export const OracleModal: React.FC<OracleModalProps> = ({ isOpen, onClose, state
       );
     }
     if (analysis) {
-      return <SimpleMarkdown text={analysis} />;
+      return <AnalysisRenderer text={analysis} />;
     }
     return null;
   };
