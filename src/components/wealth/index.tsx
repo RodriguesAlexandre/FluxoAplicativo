@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { FinancialState, Asset, AppView, ManualTransaction, DeficitStrategy, SurplusAllocation } from '@/types';
+import React, { useState, useMemo } from 'react';
+import { FinancialState, Asset, AppView, ManualTransaction, DeficitStrategy } from '@/types';
 import { Card, Button, Icon, Input, Modal } from '@/components/common';
 import { WealthProjectionChart } from '@/components/charts';
 import { calculateProjections } from '@/services/financialProjection';
-import { WealthSettingsModal } from '@/components/wealth/WealthSettingsModal';
-import { ContributionModal } from '@/components/wealth/ContributionModal';
-import { CoverDeficitModal } from '@/components/wealth/CoverDeficitModal';
+import { WealthSettingsModal } from './WealthSettingsModal';
+import { ContributionModal } from './ContributionModal';
+import { CoverDeficitModal } from './CoverDeficitModal';
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
@@ -40,7 +40,7 @@ const ManualTransactionModal: React.FC<{
     onClose: () => void;
     account: 'emergencyFund' | 'investments';
     type: 'deposit' | 'withdrawal';
-    setState: React.Dispatch<React.SetStateAction<FinancialState>>;
+    setState: React.Dispatch<React.SetStateAction<FinancialState | null>>;
 }> = ({ isOpen, onClose, account, type, setState }) => {
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
@@ -52,6 +52,7 @@ const ManualTransactionModal: React.FC<{
         if (isNaN(numericAmount) || numericAmount <= 0) return;
 
         setState(prev => {
+            if (!prev) return prev;
             const newTransaction: ManualTransaction = {
                 id: `manual_${new Date().getTime()}`,
                 account,
@@ -109,7 +110,7 @@ const ManualTransactionModal: React.FC<{
 const AssetModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
-    setState: React.Dispatch<React.SetStateAction<FinancialState>>;
+    setState: React.Dispatch<React.SetStateAction<FinancialState | null>>;
 }> = ({ isOpen, onClose, setState }) => {
     const [name, setName] = useState('');
     const [value, setValue] = useState('');
@@ -120,6 +121,7 @@ const AssetModal: React.FC<{
         if (name.trim() === '' || isNaN(numericValue) || numericValue < 0) return;
 
         setState(prev => {
+            if (!prev) return prev;
             const newAsset: Asset = {
                 id: `asset_${new Date().getTime()}`,
                 name: name.trim(),
@@ -158,7 +160,7 @@ const AssetModal: React.FC<{
 // --- Main View ---
 interface WealthPlanningViewProps {
     state: FinancialState;
-    setState: React.Dispatch<React.SetStateAction<FinancialState>>;
+    setState: React.Dispatch<React.SetStateAction<FinancialState | null>>;
     setAppView: (view: AppView) => void;
 }
 
@@ -267,11 +269,11 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
     };
 
     const handleDeleteAsset = (id: string) => {
-        setState(prev => ({...prev, assets: prev.assets.filter(a => a.id !== id)}));
+        setState(prev => (!prev ? prev : {...prev, assets: prev.assets.filter(a => a.id !== id)}));
     };
     
-    const handleStrategyChange = (change: Partial<FinancialState>) => {
-        setState(prev => ({ ...prev, ...change }));
+    const handleStrategyChange = (change: Partial<Pick<FinancialState, 'surplusAllocation' | 'deficitStrategy'>>) => {
+        setState(prev => (!prev ? prev : { ...prev, ...change }));
         // Automatically switch to projection view to give immediate feedback
         setProjectionMode('projected');
     };
@@ -292,8 +294,8 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
     };
 
     const chartLabels = projectionMode === 'real'
-        ? { principal: 'Patrimônio Inicial', growth: 'Crescimento (Juros)' }
-        : { principal: 'Total Aportado', growth: 'Crescimento (Juros)' };
+        ? { principalLabel: 'Patrimônio Inicial', growthLabel: 'Crescimento (Juros)' }
+        : { principalLabel: 'Total Aportado', growthLabel: 'Crescimento (Juros)' };
 
     return (
         <div className="p-4 sm:p-6 space-y-6">
@@ -393,8 +395,8 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
                     </div>
                     <WealthProjectionChart 
                         data={wealthProjection} 
-                        principalLabel={chartLabels.principal}
-                        growthLabel={chartLabels.growth}
+                        principalLabel={chartLabels.principalLabel}
+                        growthLabel={chartLabels.growthLabel}
                     />
                 </Card>
                  <div className="space-y-6">

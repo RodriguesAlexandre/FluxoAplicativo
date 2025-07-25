@@ -46,7 +46,7 @@ export const CoverDeficitModal: React.FC<CoverDeficitModalProps> = ({ isOpen, on
     }, [projectedDeficit, state]);
 
     const handleConfirm = () => {
-        const { withdrawalFromEF, withdrawalFromInv, deficitToCover, totalWithdrawal } = calculations;
+        const { withdrawalFromEF, withdrawalFromInv, totalWithdrawal } = calculations;
         const newTransactions: ManualTransaction[] = [];
         const transactionDate = new Date().toISOString().slice(0, 10);
         

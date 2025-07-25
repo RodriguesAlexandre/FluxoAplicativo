@@ -230,16 +230,18 @@ const AuthenticatedApp: React.FC<{ user: FirebaseUser | null, isGuest: boolean, 
         );
     }
     
-    const setSafeFinancialState: React.Dispatch<React.SetStateAction<FinancialState>> = (action) => {
+    const setSafeFinancialState: React.Dispatch<React.SetStateAction<FinancialState | null>> = (action) => {
         setFinancialState(current => {
-            if (!current) return null;
+            if (current === null && typeof action !== 'function') return action;
+            if (current === null) return null;
             return typeof action === 'function' ? action(current) : action;
         });
     };
     
-    const setSafeSimulationState: React.Dispatch<React.SetStateAction<FinancialState>> = (action) => {
+    const setSafeSimulationState: React.Dispatch<React.SetStateAction<FinancialState | null>> = (action) => {
         setSimulationState(current => {
-            if (!current) return null;
+            if (current === null && typeof action !== 'function') return action;
+            if (current === null) return null;
             return typeof action === 'function' ? action(current) : action;
         });
     };
@@ -345,7 +347,6 @@ function App() {
     const [authError, setAuthError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Use a check on the config object itself, which is more reliable.
         if (!firebaseConfig.apiKey) {
             console.warn("Firebase Auth is not configured. App cannot authenticate.");
             setAuthError("As chaves de configuração do Firebase não foram encontradas. O login com Google está desativado. Para habilitar, configure as 'Environment Variables' na sua plataforma de hospedagem (ex: Vercel). Você pode continuar sem conta.");
