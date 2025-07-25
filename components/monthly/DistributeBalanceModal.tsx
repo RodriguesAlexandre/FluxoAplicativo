@@ -11,10 +11,9 @@ interface DistributeBalanceModalProps {
   state: FinancialState;
   setState: React.Dispatch<React.SetStateAction<FinancialState>>;
   actualBalance: number;
-  realizedPerformance?: number;
 }
 
-export const DistributeBalanceModal: React.FC<DistributeBalanceModalProps> = ({ isOpen, onClose, state, setState, actualBalance, realizedPerformance = 0 }) => {
+export const DistributeBalanceModal: React.FC<DistributeBalanceModalProps> = ({ isOpen, onClose, state, setState, actualBalance }) => {
     const [toEmergency, setToEmergency] = useState('');
     const [toInvestments, setToInvestments] = useState('');
     const [toWithdrawal, setToWithdrawal] = useState('');
@@ -80,16 +79,6 @@ export const DistributeBalanceModal: React.FC<DistributeBalanceModalProps> = ({ 
         onClose();
     };
 
-    const handleAllocateResult = () => {
-        if (realizedPerformance > 0 && actualBalance > 0) {
-            const amountToAllocate = Math.min(realizedPerformance, actualBalance);
-            setToInvestments(amountToAllocate > 0 ? amountToAllocate.toFixed(2) : '');
-            setToEmergency('');
-            setToWithdrawal('');
-        }
-    };
-
-
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Distribuir Saldo da Conta Corrente">
             <div className="space-y-6">
@@ -98,19 +87,6 @@ export const DistributeBalanceModal: React.FC<DistributeBalanceModalProps> = ({ 
                     <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(actualBalance)}</p>
                 </div>
                 
-                 {realizedPerformance > 0 && (
-                    <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/40 flex items-center justify-between shadow-sm">
-                        <div>
-                            <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">Resultado do Mês (Realizado)</p>
-                            <p className="text-lg font-bold text-green-600">{formatCurrency(realizedPerformance)}</p>
-                        </div>
-                        <Button size="sm" onClick={handleAllocateResult} disabled={actualBalance <= 0}>
-                            <Icon name="plus" className="w-4 h-4 mr-1"/>
-                            Alocar Resultado
-                        </Button>
-                    </div>
-                )}
-
                 <div className="space-y-4">
                     <div>
                         <label htmlFor="to-ef" className="block text-sm font-medium mb-1">Para Reserva de Emergência</label>

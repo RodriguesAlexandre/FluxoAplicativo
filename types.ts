@@ -20,6 +20,7 @@ export interface MonthlyAdjustment {
     startMonth: string; // "YYYY-MM"
     endMonth: string | null;
     type: 'income' | 'expense';
+    status: 'pending' | 'confirmed';
 }
 
 export interface Asset {

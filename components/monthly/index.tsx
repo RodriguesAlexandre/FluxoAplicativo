@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { FinancialState, Category, Record as RecordType, AppView, MonthlyAdjustment } from '../../types';
 import { Card, Button, Icon, Input, Modal } from '../common/index.tsx';
@@ -58,17 +57,21 @@ const BridgeCard: React.FC<{ value: number }> = ({ value }) => (
 
 
 const RecordRow: React.FC<{
-    category: Category;
-    record: RecordType | undefined;
+    id: string;
+    label: string;
+    value: number;
+    status: 'pending' | 'confirmed';
+    onUpdate: (id: string, value: number, status: 'pending' | 'confirmed') => void;
+    onDelete?: (id: string) => void;
     projectedValue: number;
-    onUpdate: (categoryId: string, value: number, status: 'pending' | 'confirmed') => void;
     isFirst: boolean;
-}> = ({ category, record, projectedValue, onUpdate, isFirst }) => {
-    const [inputValue, setInputValue] = useState(record?.value?.toString() ?? '');
+    isVariable: boolean;
+}> = ({ id, label, value, status, onUpdate, onDelete, projectedValue, isFirst, isVariable }) => {
+    const [inputValue, setInputValue] = useState(value.toString());
 
     useEffect(() => {
-        setInputValue(record?.value?.toString() ?? '');
-    }, [record]);
+        setInputValue(value.toString());
+    }, [value]);
 
     const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setInputValue(e.target.value);
@@ -77,30 +80,30 @@ const RecordRow: React.FC<{
     const handleBlur = () => {
         const numericValue = parseFloat(inputValue);
         if (!isNaN(numericValue)) {
-            onUpdate(category.id, numericValue, record?.status ?? 'pending');
-        } else if (inputValue === '' && record) {
-             onUpdate(category.id, 0, record.status);
+            onUpdate(id, numericValue, status);
+        } else if (inputValue === '') {
+             onUpdate(id, 0, status);
         }
     };
 
     const toggleStatus = () => {
-        onUpdate(category.id, record?.value ?? projectedValue ?? 0, record?.status === 'confirmed' ? 'pending' : 'confirmed');
+        onUpdate(id, value ?? projectedValue ?? 0, status === 'confirmed' ? 'pending' : 'confirmed');
     };
     
-    const isProjected = !record && projectedValue > 0;
-    const isConfirmed = record?.status === 'confirmed';
+    const isProjected = value === 0 && projectedValue > 0;
+    const isConfirmed = status === 'confirmed';
 
     return (
-        <div className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${isConfirmed ? 'bg-green-50 dark:bg-green-900/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700/50'}`}>
+        <div className={`group flex items-center gap-2 p-2 rounded-lg transition-colors ${isConfirmed ? 'bg-green-50 dark:bg-green-900/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700/50'}`}>
             <button 
                 onClick={toggleStatus} 
-                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isConfirmed ? 'bg-green-500 border-green-500' : 'border-gray-400'}`} 
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${isConfirmed ? 'bg-green-500 border-green-500' : 'border-gray-400'}`} 
                 aria-label={isConfirmed ? 'Marcar como pendente' : 'Marcar como confirmado'}
                 data-tour-id={isFirst ? 'confirmar-transacao' : undefined}
             >
                 {isConfirmed && <Icon name="check" className="w-4 h-4 text-white" />}
             </button>
-            <span className={`flex-1 ${isConfirmed ? 'opacity-60' : ''}`}>{category.name}</span>
+            <span className={`flex-1 ${isConfirmed ? 'opacity-60' : ''} ${isVariable ? 'italic' : ''}`}>{label}</span>
             <div className="flex items-center gap-2 w-32">
                  <span className={`text-sm ${isConfirmed ? 'opacity-60' : 'text-gray-500 dark:text-gray-400'}`}>R$</span>
                 <input
@@ -110,32 +113,14 @@ const RecordRow: React.FC<{
                     onBlur={handleBlur}
                     placeholder={(projectedValue || 0).toFixed(2)}
                     className={`w-full text-right bg-transparent outline-none font-semibold ${isProjected ? 'text-gray-400 italic' : ''} ${isConfirmed ? 'opacity-60' : ''}`}
-                    aria-label={`Valor para ${category.name}`}
+                    aria-label={`Valor para ${label}`}
                 />
             </div>
-        </div>
-    );
-};
-
-const AdjustmentRow: React.FC<{
-    adjustment: MonthlyAdjustment;
-    onDelete: (id: string) => void;
-    isSimulating: boolean;
-    recurring: boolean;
-}> = ({ adjustment, onDelete, isSimulating, recurring }) => {
-    return (
-         <div className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 group ${recurring ? 'opacity-70' : ''}`}>
-            <div className="flex-1 text-sm italic">
-                {adjustment.description}
-                {recurring && <span className="text-xs text-gray-400 ml-2">(recorrente)</span>}
-                {adjustment.endMonth && <span className="text-xs text-gray-400 ml-2">(até {getMonthName(adjustment.endMonth)})</span>}
-            </div>
-            <span className={`font-semibold w-32 text-right pr-2 ${adjustment.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
-                {formatCurrency(adjustment.value)}
-            </span>
-             <button onClick={() => onDelete(adjustment.id)} aria-label={`Deletar ajuste ${adjustment.description}`} className="opacity-0 group-hover:opacity-100 transition-opacity w-5" disabled={isSimulating}>
-                <Icon name="trash" className="w-4 h-4 text-red-500 hover:text-red-700"/>
-            </button>
+            {onDelete && (
+                <button onClick={() => onDelete(id)} aria-label={`Deletar ${label}`} className="opacity-0 group-hover:opacity-100 transition-opacity w-5">
+                    <Icon name="trash" className="w-4 h-4 text-red-500 hover:text-red-700"/>
+                </button>
+            )}
         </div>
     );
 };
@@ -220,7 +205,7 @@ const CategorySettingsModal: React.FC<{
 const AdjustmentModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
-    onSave: (data: Omit<MonthlyAdjustment, 'id' | 'startMonth'>) => void;
+    onSave: (data: Omit<MonthlyAdjustment, 'id' | 'startMonth' | 'status'>) => void;
     type: 'income' | 'expense';
     currentMonth: string;
 }> = ({ isOpen, onClose, onSave, type, currentMonth }) => {
@@ -369,17 +354,13 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
             const originalValue = originalRecord?.value ?? 0;
             const sign = category.type === 'income' ? 1 : -1;
 
-            // This logic correctly handles all cases: confirm, un-confirm, and value change.
-            // 1. Revert the old state if it was confirmed.
             if (wasConfirmed) {
                 balanceChange -= originalValue * sign;
             }
-            // 2. Apply the new state if it is now confirmed.
             if (isConfirmed) {
                 balanceChange += value * sign;
             }
 
-            // Update record in the array
             if (recordIndex > -1) {
                 newRecords[recordIndex] = { ...newRecords[recordIndex], value, status };
             } else {
@@ -393,26 +374,73 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
             };
         });
     }, [setState, currentMonth]);
+
+    const handleUpdateAdjustment = useCallback((adjustmentId: string, value: number, status: 'pending' | 'confirmed') => {
+        setState(prev => {
+            if (!prev) return prev;
+
+            const newAdjustments = [...prev.monthlyAdjustments];
+            const adjIndex = newAdjustments.findIndex(a => a.id === adjustmentId);
+            if (adjIndex === -1) return prev;
+
+            const originalAdj = newAdjustments[adjIndex];
+            
+            let balanceChange = 0;
+            const wasConfirmed = originalAdj.status === 'confirmed';
+            const isConfirmed = status === 'confirmed';
+            const originalValue = originalAdj.value;
+            const sign = originalAdj.type === 'income' ? 1 : -1;
+
+            if (wasConfirmed) {
+                balanceChange -= originalValue * sign;
+            }
+            if (isConfirmed) {
+                balanceChange += value * sign;
+            }
+            
+            newAdjustments[adjIndex] = { ...originalAdj, value, status };
+
+            return {
+                ...prev,
+                monthlyAdjustments: newAdjustments,
+                checkingAccountBalance: prev.checkingAccountBalance + balanceChange,
+            };
+        });
+    }, [setState]);
     
     const handleUpdateCategories = (newCategories: Category[]) => {
         setState(prev => prev ? ({...prev, categories: newCategories}) : null);
     };
     
-    const handleAddAdjustment = (data: Omit<MonthlyAdjustment, 'id' | 'startMonth'>) => {
+    const handleAddAdjustment = (data: Omit<MonthlyAdjustment, 'id' | 'startMonth' | 'status'>) => {
         setState(prev => prev ? ({
             ...prev,
             monthlyAdjustments: [
                 ...prev.monthlyAdjustments,
-                { ...data, id: `adj_${new Date().getTime()}`, startMonth: currentMonth }
+                { ...data, id: `adj_${new Date().getTime()}`, startMonth: currentMonth, status: 'pending' }
             ]
         }) : null)
     };
     
     const handleDeleteAdjustment = (id: string) => {
-        setState(prev => prev ? ({
-            ...prev,
-            monthlyAdjustments: prev.monthlyAdjustments.filter(a => a.id !== id)
-        }) : null)
+        setState(prev => {
+            if (!prev) return prev;
+            
+            const adjToDelete = prev.monthlyAdjustments.find(a => a.id === id);
+            if (!adjToDelete) return prev;
+
+            let balanceChange = 0;
+            if (adjToDelete.status === 'confirmed') {
+                const sign = adjToDelete.type === 'income' ? 1 : -1;
+                balanceChange = - (adjToDelete.value * sign);
+            }
+
+            return {
+                ...prev,
+                monthlyAdjustments: prev.monthlyAdjustments.filter(a => a.id !== id),
+                checkingAccountBalance: prev.checkingAccountBalance + balanceChange,
+            };
+        })
     }
 
     const handleMonthChange = (e: React.MouseEvent<HTMLButtonElement>, direction: 'prev' | 'next') => {
@@ -424,9 +452,9 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
     const incomeCategories = state.categories.filter(c => c.type === 'income');
     const expenseCategories = state.categories.filter(c => c.type === 'expense');
     
-    const currentAdjustments = state.monthlyAdjustments.filter(a => a.startMonth === currentMonth);
-    const recurringAdjustments = state.monthlyAdjustments.filter(a => a.startMonth < currentMonth && (!a.endMonth || a.endMonth >= currentMonth));
-
+    const currentMonthAdjustments = state.monthlyAdjustments.filter(a => 
+        a.startMonth <= currentMonth && (!a.endMonth || a.endMonth >= currentMonth)
+    );
 
     return (
         <div className="flex-1 flex flex-col">
@@ -486,21 +514,36 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                         <Card>
                             <h3 className="text-lg font-bold mb-2 text-green-600">Entradas</h3>
                             <div className="space-y-1">
-                                {incomeCategories.map((cat, index) => (
-                                    <RecordRow key={cat.id} category={cat} record={state.records.find(r => r.categoryId === cat.id && r.month === currentMonth)} projectedValue={derivedData.projectedPlaceholders.get(cat.id) || 0} onUpdate={handleUpdateRecord} isFirst={index === 0}/>
-                                ))}
-                                {[...recurringAdjustments, ...currentAdjustments]
-                                    .filter(adj => adj.type === 'income')
-                                    .map(adj => (
-                                        <AdjustmentRow 
-                                            key={adj.id} 
-                                            adjustment={adj} 
-                                            onDelete={handleDeleteAdjustment} 
-                                            isSimulating={isSimulating}
-                                            recurring={adj.startMonth < currentMonth}
+                                {incomeCategories.map((cat, index) => {
+                                    const record = state.records.find(r => r.categoryId === cat.id && r.month === currentMonth);
+                                    return (
+                                        <RecordRow 
+                                            key={cat.id} 
+                                            id={cat.id}
+                                            label={cat.name}
+                                            value={record?.value ?? 0}
+                                            status={record?.status ?? 'pending'}
+                                            projectedValue={derivedData.projectedPlaceholders.get(cat.id) || 0}
+                                            onUpdate={handleUpdateRecord}
+                                            isFirst={index === 0}
+                                            isVariable={false}
                                         />
-                                    ))
-                                }
+                                    );
+                                })}
+                                {currentMonthAdjustments.filter(adj => adj.type === 'income').map(adj => (
+                                    <RecordRow
+                                        key={adj.id}
+                                        id={adj.id}
+                                        label={adj.description}
+                                        value={adj.value}
+                                        status={adj.status}
+                                        projectedValue={0}
+                                        onUpdate={handleUpdateAdjustment}
+                                        onDelete={handleDeleteAdjustment}
+                                        isFirst={false}
+                                        isVariable={true}
+                                    />
+                                ))}
                             </div>
                              <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setAdjustmentModal({isOpen: true, type: 'income'})}>
                                 <Icon name="plus" className="w-4 h-4 mr-1"/> Adicionar Variável
@@ -509,21 +552,36 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                         <Card className="flex flex-col flex-grow">
                              <h3 className="text-lg font-bold mb-2 text-red-600">Saídas</h3>
                             <div className="space-y-1 flex-grow">
-                                {expenseCategories.map((cat, index) => (
-                                    <RecordRow key={cat.id} category={cat} record={state.records.find(r => r.categoryId === cat.id && r.month === currentMonth)} projectedValue={derivedData.projectedPlaceholders.get(cat.id) || 0} onUpdate={handleUpdateRecord} isFirst={false}/>
-                                ))}
-                                {[...recurringAdjustments, ...currentAdjustments]
-                                    .filter(adj => adj.type === 'expense')
-                                    .map(adj => (
-                                        <AdjustmentRow 
-                                            key={adj.id} 
-                                            adjustment={adj} 
-                                            onDelete={handleDeleteAdjustment} 
-                                            isSimulating={isSimulating}
-                                            recurring={adj.startMonth < currentMonth}
+                                {expenseCategories.map((cat) => {
+                                    const record = state.records.find(r => r.categoryId === cat.id && r.month === currentMonth);
+                                    return (
+                                        <RecordRow 
+                                            key={cat.id} 
+                                            id={cat.id}
+                                            label={cat.name}
+                                            value={record?.value ?? 0}
+                                            status={record?.status ?? 'pending'}
+                                            projectedValue={derivedData.projectedPlaceholders.get(cat.id) || 0} 
+                                            onUpdate={handleUpdateRecord} 
+                                            isFirst={false}
+                                            isVariable={false}
                                         />
-                                    ))
-                                }
+                                    );
+                                })}
+                                {currentMonthAdjustments.filter(adj => adj.type === 'expense').map(adj => (
+                                    <RecordRow
+                                        key={adj.id}
+                                        id={adj.id}
+                                        label={adj.description}
+                                        value={adj.value}
+                                        status={adj.status}
+                                        projectedValue={0}
+                                        onUpdate={handleUpdateAdjustment}
+                                        onDelete={handleDeleteAdjustment}
+                                        isFirst={false}
+                                        isVariable={true}
+                                    />
+                                ))}
                             </div>
                             <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setAdjustmentModal({isOpen: true, type: 'expense'})}>
                                 <Icon name="plus" className="w-4 h-4 mr-1"/> Adicionar Variável
@@ -547,7 +605,7 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
 
             {/* Modals */}
             <CategorySettingsModal isOpen={isCategoryModalOpen} onClose={() => setCategoryModalOpen(false)} categories={state.categories} onUpdate={handleUpdateCategories} />
-            <DistributeBalanceModal isOpen={isDistributeModalOpen} onClose={() => setDistributeModalOpen(false)} state={state} setState={setState} actualBalance={state.checkingAccountBalance} realizedPerformance={derivedData.performanceRealizada} />
+            <DistributeBalanceModal isOpen={isDistributeModalOpen} onClose={() => setDistributeModalOpen(false)} state={state} setState={setState} actualBalance={state.checkingAccountBalance} />
             <WealthSettingsModal isOpen={isWealthSettingsModalOpen} onClose={() => setWealthSettingsModalOpen(false)} state={state} setState={setState} />
             <AdjustmentModal isOpen={adjustmentModal.isOpen} onClose={() => setAdjustmentModal({ isOpen: false, type: 'income'})} onSave={handleAddAdjustment} type={adjustmentModal.type} currentMonth={currentMonth} />
         </div>
