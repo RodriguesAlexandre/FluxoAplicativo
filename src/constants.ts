@@ -1,5 +1,4 @@
-
-import { FinancialState, Category } from './types';
+import { FinancialState, Category } from '@/types';
 
 const defaultCategories: Category[] = [
     { id: 'sal', name: 'Salário', type: 'income' },

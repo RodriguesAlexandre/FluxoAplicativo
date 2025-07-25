@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Modal, Button, Icon, Input, Spinner } from '../common/index.tsx';
-import { getFeatureExplanation } from '../../services/geminiService';
+import { Modal, Button, Icon, Input, Spinner } from '@/components/common';
+import { getFeatureExplanation } from '@/services/geminiService';
 
 const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
     const parts = text.split(/(\*\*.*?\*\*)/g);

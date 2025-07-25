@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type firebase from 'firebase/compat/app';
-import { auth, googleProvider } from './services/firebase';
-import { useFinancialState } from './hooks/useFinancialState';
-import { AppView, FinancialState } from './types';
-import MonthlyControlView from './components/monthly/index.tsx';
-import WealthPlanningView from './components/wealth/index.tsx';
-import { OracleModal } from './components/oracle/OracleModal';
-import { Button, Icon, Modal, Spinner, Input } from './components/common/index.tsx';
-import { LoginScreen } from './components/LoginScreen';
-import { BLANK_FINANCIAL_STATE } from './constants';
-import { GuideModal } from './components/guide/GuideModal';
-import { tourSteps } from './tourSteps';
-import { TourPopover } from './components/tour/TourPopover';
+import { auth, googleProvider, firebaseConfig } from '@/services/firebase';
+import { useFinancialState } from '@/hooks/useFinancialState';
+import { AppView, FinancialState } from '@/types';
+import MonthlyControlView from '@/components/monthly';
+import WealthPlanningView from '@/components/wealth';
+import { OracleModal } from '@/components/oracle/OracleModal';
+import { Button, Icon, Modal, Spinner, Input } from '@/components/common';
+import { LoginScreen } from '@/components/LoginScreen';
+import { BLANK_FINANCIAL_STATE } from '@/constants';
+import { GuideModal } from '@/components/guide/GuideModal';
+import { tourSteps } from '@/tourSteps';
+import { TourPopover } from '@/components/tour/TourPopover';
 
 type FirebaseUser = firebase.User;
 
@@ -345,9 +345,10 @@ function App() {
     const [authError, setAuthError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!auth?.app) {
+        // Use a check on the config object itself, which is more reliable.
+        if (!firebaseConfig.apiKey) {
             console.warn("Firebase Auth is not configured. App cannot authenticate.");
-            setAuthError("As chaves de configuração do Firebase não foram encontradas. O login com Google está desativado. Para habilitar, configure as 'Environment Variables' com o prefixo 'VITE_' na sua plataforma de hospedagem (ex: Vercel). Você pode continuar sem conta.");
+            setAuthError("As chaves de configuração do Firebase não foram encontradas. O login com Google está desativado. Para habilitar, configure as 'Environment Variables' na sua plataforma de hospedagem (ex: Vercel). Você pode continuar sem conta.");
             setLoadingAuthState(false);
             return;
         }
@@ -361,7 +362,7 @@ function App() {
     }, []);
 
     const handleSignIn = async () => {
-        if (!auth?.app) return;
+        if (!firebaseConfig.apiKey) return;
         setIsAuthenticating(true);
         setAuthError(null);
         try {
@@ -381,7 +382,7 @@ function App() {
     const handleSignOut = async () => {
         if(isGuest) {
             setIsGuest(false);
-        } else if (auth?.app) {
+        } else if (firebaseConfig.apiKey) {
             try {
                 await auth.signOut();
             } catch (error) {

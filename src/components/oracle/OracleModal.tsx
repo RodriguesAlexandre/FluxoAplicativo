@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Spinner, Button, Icon } from '../common/index.tsx';
-import { getFinancialAnalysis } from '../../services/geminiService';
-import { FinancialState } from '../../types';
+import { Modal, Spinner, Button, Icon } from '@/components/common';
+import { getFinancialAnalysis } from '@/services/geminiService';
+import { FinancialState } from '@/types';
 
 interface OracleModalProps {
   isOpen: boolean;

@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useState, useRef } from 'react';
-import { Button, Icon } from '../common/index.tsx';
-import { TourStep } from '../../tourSteps';
+import { Button, Icon } from '@/components/common';
+import { TourStep } from '@/tourSteps';
 
 interface TourPopoverProps {
   step: TourStep;

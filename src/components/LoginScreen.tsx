@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Icon, Spinner, Card } from './common/index.tsx';
+import { Button, Icon, Spinner, Card } from '@/components/common';
 
 const GoogleIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-6 h-6 mr-3">
@@ -72,7 +72,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSignIn, onContinueAs
                             </div>
                         ) : (
                             <>
-                                <Button size="lg" className="w-full" onClick={onSignIn} disabled={isAuthenticating || !process.env.VITE_FIREBASE_API_KEY}>
+                                <Button size="lg" className="w-full" onClick={onSignIn} disabled={isAuthenticating || !import.meta.env.VITE_FIREBASE_API_KEY}>
                                     <GoogleIcon />
                                     Entrar com o Google
                                 </Button>
