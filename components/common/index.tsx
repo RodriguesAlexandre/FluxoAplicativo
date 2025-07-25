@@ -132,9 +132,15 @@ interface IconProps {
 export const Icon: React.FC<IconProps> = ({ name, className = 'w-6 h-6' }) => {
   const icons: { [key: string]: ReactNode } = {
     'logo': <>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 8h16" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 16h12" />
+        <defs>
+            <linearGradient id="logoGradient" x1="0%" y1="100%" x2="0%" y2="0%">
+                <stop offset="0%" stopColor="#2563EB" />
+                <stop offset="100%" stopColor="#2DD4BF" />
+            </linearGradient>
+        </defs>
+        <path d="M3 19 C 8 19, 12 16, 17 16" stroke="url(#logoGradient)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+        <path d="M3 13 C 9 13, 14 10, 20 10" stroke="url(#logoGradient)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+        <path d="M3 7 C 10 7, 15 4, 22 4" stroke="url(#logoGradient)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
     </>,
     'plus': <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />,
     'minus': <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />,
