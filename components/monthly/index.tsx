@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { FinancialState, Category, Record as RecordType, AppView, MonthlyAdjustment } from '@/types';
-import { Card, Button, Icon, Input, Modal } from '@/components/common';
-import { MonthlyCashflowChart } from '@/components/charts';
-import { calculateProjections, addMonths } from '@/services/financialProjection';
-import { DistributeBalanceModal } from '@/components/monthly/DistributeBalanceModal';
-import { WealthSettingsModal } from '@/components/wealth/WealthSettingsModal';
+import { FinancialState, Category, Record as RecordType, AppView, MonthlyAdjustment } from '../../types';
+import { Card, Button, Icon, Input, Modal } from '../common/index.tsx';
+import { MonthlyCashflowChart } from '../charts/index.tsx';
+import { calculateProjections, addMonths } from '../../services/financialProjection';
+import { DistributeBalanceModal } from './DistributeBalanceModal';
+import { WealthSettingsModal } from '../wealth/WealthSettingsModal';
 
 // --- Helper Functions ---
 const getMonthName = (monthStr: string) => new Date(monthStr + '-02').toLocaleString('pt-BR', { month: 'long', year: 'numeric' });

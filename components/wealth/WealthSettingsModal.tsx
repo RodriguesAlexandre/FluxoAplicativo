@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FinancialState } from '@/types';
-import { Modal, Button, Input } from '@/components/common';
+import { FinancialState } from '../../types';
+import { Modal, Button, Input } from '../common/index.tsx';
 
 export const WealthSettingsModal: React.FC<{
     isOpen: boolean;

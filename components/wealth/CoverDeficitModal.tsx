@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { Modal, Button, Icon } from '@/components/common';
-import { FinancialState, ManualTransaction } from '@/types';
+import { Modal, Button, Icon } from '../common/index.tsx';
+import { FinancialState, ManualTransaction } from '../../types';
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 

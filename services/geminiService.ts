@@ -1,25 +1,19 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { FinancialState } from '@/types';
-
-// Use import.meta.env for Vite environment variables
-const apiKey = import.meta.env.VITE_API_KEY;
-let ai: GoogleGenAI | null = null;
-
-if (apiKey) {
-    ai = new GoogleGenAI({ apiKey });
-} else {
-    console.warn("VITE_API_KEY environment variable not found. AI features are in maintenance mode.");
-}
-
+import { FinancialState } from '../types';
 
 export const getFinancialAnalysis = async (state: FinancialState): Promise<string> => {
-    if (!ai) {
+    const apiKey = process.env.VITE_API_KEY;
+
+    if (!apiKey) {
+        console.warn("API_KEY environment variable not found. Oracle is in maintenance mode.");
         return new Promise(resolve => {
             setTimeout(() => {
-                resolve("O Oráculo está em manutenção. A análise financeira via IA está temporariamente indisponível. Por favor, configure sua VITE_API_KEY para habilitar esta funcionalidade.");
+                resolve("O Oráculo está em manutenção. A análise financeira via IA está temporariamente indisponível. Por favor, configure sua API Key para habilitar esta funcionalidade.");
             }, 1500);
         });
     }
+
+    const ai = new GoogleGenAI({ apiKey });
 
     // --- Data Calculation for more accurate analysis ---
     const getProjectedValue = (categoryId: string, month: string, records: FinancialState['records']): number => {
@@ -101,9 +95,12 @@ export const getFinancialAnalysis = async (state: FinancialState): Promise<strin
 };
 
 export const getFeatureExplanation = async (question: string): Promise<string> => {
-     if (!ai) {
-        return "A funcionalidade de chat com o Guia está indisponível. Por favor, configure sua VITE_API_KEY para habilitar.";
+    const apiKey = process.env.VITE_API_KEY;
+     if (!apiKey) {
+        return "A funcionalidade de chat com o Guia está indisponível. Por favor, configure sua API Key para habilitar.";
     }
+
+    const ai = new GoogleGenAI({ apiKey });
     
     const systemInstruction = `
         Você é o "Guia Interativo" do aplicativo financeiro "Fluxo". Sua única função é responder perguntas dos usuários sobre COMO USAR o aplicativo. Você não dá conselhos financeiros. Seja claro, direto e amigável.
