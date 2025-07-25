@@ -121,17 +121,19 @@ const AdjustmentRow: React.FC<{
     adjustment: MonthlyAdjustment;
     onDelete: (id: string) => void;
     isSimulating: boolean;
-}> = ({ adjustment, onDelete, isSimulating }) => {
+    recurring: boolean;
+}> = ({ adjustment, onDelete, isSimulating, recurring }) => {
     return (
-         <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 group">
+         <div className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 group ${recurring ? 'opacity-70' : ''}`}>
             <div className="flex-1 text-sm italic">
                 {adjustment.description}
+                {recurring && <span className="text-xs text-gray-400 ml-2">(recorrente)</span>}
                 {adjustment.endMonth && <span className="text-xs text-gray-400 ml-2">(até {getMonthName(adjustment.endMonth)})</span>}
             </div>
             <span className={`font-semibold w-32 text-right pr-2 ${adjustment.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
                 {formatCurrency(adjustment.value)}
             </span>
-             <button onClick={() => onDelete(adjustment.id)} aria-label={`Deletar ajuste ${adjustment.description}`} className="opacity-0 group-hover:opacity-100 transition-opacity" disabled={isSimulating}>
+             <button onClick={() => onDelete(adjustment.id)} aria-label={`Deletar ajuste ${adjustment.description}`} className="opacity-0 group-hover:opacity-100 transition-opacity w-5" disabled={isSimulating}>
                 <Icon name="trash" className="w-4 h-4 text-red-500 hover:text-red-700"/>
             </button>
         </div>
@@ -487,6 +489,18 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                                 {incomeCategories.map((cat, index) => (
                                     <RecordRow key={cat.id} category={cat} record={state.records.find(r => r.categoryId === cat.id && r.month === currentMonth)} projectedValue={derivedData.projectedPlaceholders.get(cat.id) || 0} onUpdate={handleUpdateRecord} isFirst={index === 0}/>
                                 ))}
+                                {[...recurringAdjustments, ...currentAdjustments]
+                                    .filter(adj => adj.type === 'income')
+                                    .map(adj => (
+                                        <AdjustmentRow 
+                                            key={adj.id} 
+                                            adjustment={adj} 
+                                            onDelete={handleDeleteAdjustment} 
+                                            isSimulating={isSimulating}
+                                            recurring={adj.startMonth < currentMonth}
+                                        />
+                                    ))
+                                }
                             </div>
                              <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setAdjustmentModal({isOpen: true, type: 'income'})}>
                                 <Icon name="plus" className="w-4 h-4 mr-1"/> Adicionar Variável
@@ -498,6 +512,18 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                                 {expenseCategories.map((cat, index) => (
                                     <RecordRow key={cat.id} category={cat} record={state.records.find(r => r.categoryId === cat.id && r.month === currentMonth)} projectedValue={derivedData.projectedPlaceholders.get(cat.id) || 0} onUpdate={handleUpdateRecord} isFirst={false}/>
                                 ))}
+                                {[...recurringAdjustments, ...currentAdjustments]
+                                    .filter(adj => adj.type === 'expense')
+                                    .map(adj => (
+                                        <AdjustmentRow 
+                                            key={adj.id} 
+                                            adjustment={adj} 
+                                            onDelete={handleDeleteAdjustment} 
+                                            isSimulating={isSimulating}
+                                            recurring={adj.startMonth < currentMonth}
+                                        />
+                                    ))
+                                }
                             </div>
                             <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setAdjustmentModal({isOpen: true, type: 'expense'})}>
                                 <Icon name="plus" className="w-4 h-4 mr-1"/> Adicionar Variável
@@ -517,30 +543,6 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                         </div>
                     </Card>
                 </div>
-
-                {/* Monthly Adjustments */}
-                {(currentAdjustments.length > 0 || recurringAdjustments.length > 0) && (
-                    <Card>
-                         <h3 className="text-lg font-bold mb-2">Ajustes do Mês</h3>
-                         <div className="space-y-1">
-                            {recurringAdjustments.map(adj => (
-                                <div key={adj.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                                    <div className="flex-1 text-sm italic opacity-70">
-                                        {adj.description} (recorrente)
-                                    </div>
-                                    <span className={`font-semibold w-32 text-right pr-2 opacity-70 ${adj.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
-                                        {formatCurrency(adj.value)}
-                                    </span>
-                                    <div className="w-10" /> {/* Spacer */}
-                                </div>
-                            ))}
-                            {currentAdjustments.map(adj => (
-                                <AdjustmentRow key={adj.id} adjustment={adj} onDelete={handleDeleteAdjustment} isSimulating={isSimulating} />
-                            ))}
-                        </div>
-                    </Card>
-                )}
-
             </div>
 
             {/* Modals */}
