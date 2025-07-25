@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { FinancialState, Category, Record as RecordType, AppView, MonthlyAdjustment } from '@/types';
-import { Card, Button, Icon, Input, Modal } from '@/components/common';
-import { MonthlyCashflowChart } from '@/components/charts';
-import { calculateProjections, addMonths } from '@/services/financialProjection';
-import { DistributeBalanceModal } from '@/components/monthly/DistributeBalanceModal';
-import { WealthSettingsModal } from '@/components/wealth/WealthSettingsModal';
+import { FinancialState, Category, Record as RecordType, AppView, MonthlyAdjustment } from '../../types';
+import { Card, Button, Icon, Input, Modal } from '../common/index.tsx';
+import { MonthlyCashflowChart } from '../charts/index.tsx';
+import { calculateProjections, addMonths } from '../../services/financialProjection';
+import { DistributeBalanceModal } from './DistributeBalanceModal';
+import { WealthSettingsModal } from '../wealth/WealthSettingsModal';
 
 // --- Helper Functions ---
 const getMonthName = (monthStr: string) => new Date(monthStr + '-02').toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
@@ -278,7 +278,7 @@ const AdjustmentModal: React.FC<{
 // --- Main View ---
 interface MonthlyControlViewProps {
     state: FinancialState;
-    setState: React.Dispatch<React.SetStateAction<FinancialState | null>>;
+    setState: React.Dispatch<React.SetStateAction<FinancialState>>;
     setAppView: (view: AppView) => void;
     onOpenOracle: () => void;
     isSimulating: boolean;
@@ -392,7 +392,7 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
     }, [setState, currentMonth]);
     
     const handleUpdateCategories = (newCategories: Category[]) => {
-        setState(prev => prev ? ({...prev, categories: newCategories}) : prev);
+        setState(prev => prev ? ({...prev, categories: newCategories}) : null);
     };
     
     const handleAddAdjustment = (data: Omit<MonthlyAdjustment, 'id' | 'startMonth'>) => {
@@ -402,14 +402,14 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                 ...prev.monthlyAdjustments,
                 { ...data, id: `adj_${new Date().getTime()}`, startMonth: currentMonth }
             ]
-        }) : prev)
+        }) : null)
     };
     
     const handleDeleteAdjustment = (id: string) => {
         setState(prev => prev ? ({
             ...prev,
             monthlyAdjustments: prev.monthlyAdjustments.filter(a => a.id !== id)
-        }) : prev)
+        }) : null)
     }
 
     const handleMonthChange = (e: React.MouseEvent<HTMLButtonElement>, direction: 'prev' | 'next') => {

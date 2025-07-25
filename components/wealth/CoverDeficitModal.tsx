@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { Modal, Button, Icon } from '@/components/common';
-import { FinancialState, ManualTransaction } from '@/types';
+import { Modal, Button, Icon } from '../common/index.tsx';
+import { FinancialState, ManualTransaction } from '../../types';
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
@@ -8,7 +8,7 @@ interface CoverDeficitModalProps {
   isOpen: boolean;
   onClose: () => void;
   state: FinancialState;
-  setState: React.Dispatch<React.SetStateAction<FinancialState | null>>;
+  setState: React.Dispatch<React.SetStateAction<FinancialState>>;
   projectedDeficit: number;
 }
 
@@ -46,7 +46,7 @@ export const CoverDeficitModal: React.FC<CoverDeficitModalProps> = ({ isOpen, on
     }, [projectedDeficit, state]);
 
     const handleConfirm = () => {
-        const { withdrawalFromEF, withdrawalFromInv, totalWithdrawal } = calculations;
+        const { withdrawalFromEF, withdrawalFromInv, deficitToCover, totalWithdrawal } = calculations;
         const newTransactions: ManualTransaction[] = [];
         const transactionDate = new Date().toISOString().slice(0, 10);
         
@@ -74,16 +74,13 @@ export const CoverDeficitModal: React.FC<CoverDeficitModalProps> = ({ isOpen, on
             });
         }
 
-        setState(prev => {
-            if (!prev) return null;
-            return {
-                ...prev,
-                checkingAccountBalance: prev.checkingAccountBalance + amountToTransfer,
-                emergencyFund: { ...prev.emergencyFund, balance: prev.emergencyFund.balance - withdrawalFromEF },
-                investments: { ...prev.investments, balance: prev.investments.balance - withdrawalFromInv },
-                manualTransactions: [...newTransactions, ...prev.manualTransactions],
-            }
-        });
+        setState(prev => ({
+            ...prev,
+            checkingAccountBalance: prev.checkingAccountBalance + amountToTransfer,
+            emergencyFund: { ...prev.emergencyFund, balance: prev.emergencyFund.balance - withdrawalFromEF },
+            investments: { ...prev.investments, balance: prev.investments.balance - withdrawalFromInv },
+            manualTransactions: [...newTransactions, ...prev.manualTransactions],
+        }));
 
         onClose();
     };

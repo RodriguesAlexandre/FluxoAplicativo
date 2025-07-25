@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Modal, Button, Input, Icon } from '@/components/common';
-import { FinancialState, ManualTransaction } from '@/types';
+import { Modal, Button, Input, Icon } from '../common/index.tsx';
+import { FinancialState, ManualTransaction } from '../../types';
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
@@ -8,7 +8,7 @@ interface ContributionModalProps {
   isOpen: boolean;
   onClose: () => void;
   state: FinancialState;
-  setState: React.Dispatch<React.SetStateAction<FinancialState | null>>;
+  setState: React.Dispatch<React.SetStateAction<FinancialState>>;
   projectedSurplus: number;
   emergencyFundGoal: number;
 }
@@ -77,16 +77,13 @@ export const ContributionModal: React.FC<ContributionModalProps> = ({ isOpen, on
             });
         }
 
-        setState(prev => {
-            if (!prev) return null;
-            return {
-                ...prev,
-                checkingAccountBalance: prev.checkingAccountBalance - total,
-                emergencyFund: { ...prev.emergencyFund, balance: prev.emergencyFund.balance + toEmergency },
-                investments: { ...prev.investments, balance: prev.investments.balance + toInvestments },
-                manualTransactions: [...newTransactions, ...prev.manualTransactions],
-            }
-        });
+        setState(prev => ({
+            ...prev,
+            checkingAccountBalance: prev.checkingAccountBalance - total,
+            emergencyFund: { ...prev.emergencyFund, balance: prev.emergencyFund.balance + toEmergency },
+            investments: { ...prev.investments, balance: prev.investments.balance + toInvestments },
+            manualTransactions: [...newTransactions, ...prev.manualTransactions],
+        }));
         
         onClose();
     };

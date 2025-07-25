@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Modal, Spinner, Button, Icon } from '@/components/common';
-import { getFinancialAnalysis } from '@/services/geminiService';
-import { FinancialState } from '@/types';
+import React, { useState, useEffect } from 'react';
+import { Modal, Spinner, Button, Icon } from '../common/index.tsx';
+import { getFinancialAnalysis } from '../../services/geminiService';
+import { FinancialState } from '../../types';
 
 interface OracleModalProps {
   isOpen: boolean;
@@ -16,21 +16,20 @@ const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
     return (
         <div className="space-y-4">
             {sections.map((section, index) => {
-                const content = sections[index + 1] || '';
                 if (index % 2 === 0) {
                     // This is a title
+                    return <h3 key={index} className="font-bold text-lg mt-3 mb-1 text-gray-800 dark:text-gray-100">{section.trim()}</h3>;
+                } else {
+                    // This is content for the previous title
+                    const listItems = section.split(/\n-|\n\d\./).filter(s => s.trim() !== '');
                     return (
-                        <div key={index}>
-                             <h3 className="font-bold text-lg mt-3 mb-1 text-gray-800 dark:text-gray-100">{section.trim().replace(/:$/, '')}</h3>
-                             <div className="space-y-2 text-gray-600 dark:text-gray-300">
-                                {content.split(/\n-|\n\d\./).filter(s => s.trim() !== '').map((item, itemIndex) => (
-                                     <p key={itemIndex}>{item.trim()}</p>
-                                ))}
-                            </div>
-                        </div>
-                    )
+                        <ul key={index} className="space-y-2 list-disc list-inside text-gray-600 dark:text-gray-300">
+                            {listItems.map((item, itemIndex) => (
+                                <li key={itemIndex}>{item.trim()}</li>
+                            ))}
+                        </ul>
+                    );
                 }
-                return null;
             })}
         </div>
     );
@@ -42,7 +41,7 @@ export const OracleModal: React.FC<OracleModalProps> = ({ isOpen, onClose, state
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAnalysis = useCallback(async () => {
+  const fetchAnalysis = async () => {
     if (!state) return;
     setIsLoading(true);
     setError(null);
@@ -55,13 +54,14 @@ export const OracleModal: React.FC<OracleModalProps> = ({ isOpen, onClose, state
     } finally {
       setIsLoading(false);
     }
-  }, [state]);
+  };
 
   useEffect(() => {
     if (isOpen) {
       fetchAnalysis();
     }
-  }, [isOpen, fetchAnalysis]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const renderContent = () => {
     if (isLoading) {

@@ -1,4 +1,5 @@
-import { FinancialState } from '@/types';
+
+import { FinancialState } from '../types';
 
 export const addMonths = (dateStr: string, months: number): string => {
     const date = new Date(dateStr + '-02T00:00:00Z'); // Use UTC to avoid timezone issues
