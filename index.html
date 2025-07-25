@@ -1,0 +1,30 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fluxo - Financial Co-Pilot</title>
+    
+    <!-- Tailwind CSS: Loaded from a CDN for simplicity. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div id="root"></div>
+    
+    <!-- 
+      This is the entry point for the application. 
+      Vite processes this file, bundles dependencies like React and Firebase,
+      and injects the necessary environment variables. The <script type="importmap">
+      was removed as it was the root cause of the authentication errors by
+      conflicting with this process.
+    -->
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
