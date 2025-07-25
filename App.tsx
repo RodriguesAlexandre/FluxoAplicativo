@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import type firebase from 'firebase/compat/app';
 import { auth, googleProvider } from './services/firebase';
@@ -11,7 +10,7 @@ import { OracleModal } from './components/oracle/OracleModal';
 import { Button, Icon, Modal, Spinner, Input } from './components/common/index.tsx';
 import { LoginScreen } from './components/LoginScreen';
 import { BLANK_FINANCIAL_STATE } from './constants';
-import { GuideModal } from './components/guide/GuideModal';
+import { GuideModal, GuideTab } from './components/guide/GuideModal';
 import { tourSteps } from './tourSteps';
 import { TourPopover } from './components/tour/TourPopover';
 
@@ -24,13 +23,13 @@ const AppHeader: React.FC<{
     onSetView: (view: AppView) => void;
     onOpenHelp: () => void;
     onOpenReset: () => void;
-    user: FirebaseUser | null;
-    isGuest: boolean;
+    user: FirebaseUser;
     onSignOut: () => void;
+    onLinkAccount: () => void;
     isSimulating: boolean;
     theme: Theme;
     setTheme: (theme: Theme) => void;
-}> = ({ activeView, onSetView, onOpenHelp, onOpenReset, user, isGuest, onSignOut, isSimulating, theme, setTheme }) => {
+}> = ({ activeView, onSetView, onOpenHelp, onOpenReset, user, onSignOut, onLinkAccount, isSimulating, theme, setTheme }) => {
     const [isMenuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     
@@ -38,9 +37,10 @@ const AppHeader: React.FC<{
     const activeTabStyle = "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400";
     const inactiveTabStyle = "text-gray-500 border-transparent hover:text-gray-800 dark:hover:text-gray-200";
 
-    const userName = isGuest ? "Convidado" : user?.displayName || 'Usuário';
-    const userEmail = isGuest ? "Dados salvos localmente" : user?.email;
-    const userPhoto = isGuest ? null : user?.photoURL || undefined;
+    const isAnonymous = user.isAnonymous;
+    const userName = isAnonymous ? "Convidado" : user.displayName || 'Usuário';
+    const userEmail = isAnonymous ? "Dados salvos na nuvem anonimamente" : user.email;
+    const userPhoto = isAnonymous ? null : user.photoURL || undefined;
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -83,7 +83,7 @@ const AppHeader: React.FC<{
                 </div>
                 <div className="relative" ref={menuRef} data-tour-id="user-menu">
                     <button onClick={() => setMenuOpen(o => !o)} className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                        {isGuest ? (
+                        {isAnonymous ? (
                             <div className="w-8 h-8 rounded-full bg-gray-500 flex items-center justify-center text-white font-bold text-sm" title="Modo Convidado">
                                 <Icon name="user-circle" className="w-6 h-6"/>
                             </div>
@@ -94,12 +94,15 @@ const AppHeader: React.FC<{
                     {isMenuOpen && (
                          <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-2 transform transition-all origin-top-right animate-[fade-in-down_150ms_ease-out]">
                             <div className="flex items-center gap-3 p-2 border-b border-gray-200 dark:border-gray-700 mb-2">
-                               {isGuest ? <div className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center text-white font-bold" title="Modo Convidado"><Icon name="user-circle" className="w-7 h-7"/></div> : (userPhoto && <img src={userPhoto} alt="User" className="w-10 h-10 rounded-full" />)}
+                               {isAnonymous ? <div className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center text-white font-bold" title="Modo Convidado"><Icon name="user-circle" className="w-7 h-7"/></div> : (userPhoto && <img src={userPhoto} alt="User" className="w-10 h-10 rounded-full" />)}
                                 <div className="flex-1 overflow-hidden">
                                     <p className="font-bold truncate">{userName}</p>
                                     <p className="text-xs text-gray-500 truncate">{userEmail}</p>
                                 </div>
                             </div>
+                            
+                            {isAnonymous && <button onClick={() => { onLinkAccount(); setMenuOpen(false); }} className="w-full flex items-center gap-3 p-2 text-left rounded-lg bg-green-100 text-green-800 dark:bg-green-800 dark:text-white hover:bg-green-200 dark:hover:bg-green-700 transition-colors font-semibold"><Icon name="save" className="w-5 h-5"/> Salvar com Google</button>}
+
                             <button onClick={() => { onOpenHelp(); setMenuOpen(false); }} className="w-full flex items-center gap-3 p-2 text-left rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><Icon name="help" className="w-5 h-5 text-gray-500 dark:text-gray-400"/> Guia Interativo</button>
                             <button onClick={() => { onOpenReset(); setMenuOpen(false); }} className="w-full flex items-center gap-3 p-2 text-left rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"><Icon name="warning" className="w-5 h-5"/> Resetar Dados</button>
                             <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
@@ -114,7 +117,7 @@ const AppHeader: React.FC<{
                             </div>
                             
                             <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
-                            <button onClick={onSignOut} className="w-full flex items-center gap-3 p-2 text-left rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><Icon name="logout" className="w-5 h-5 text-gray-500 dark:text-gray-400"/> {isGuest ? 'Voltar' : 'Sair'}</button>
+                            <button onClick={onSignOut} className="w-full flex items-center gap-3 p-2 text-left rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><Icon name="logout" className="w-5 h-5 text-gray-500 dark:text-gray-400"/> Sair</button>
                         </div>
                     )}
                 </div>
@@ -124,10 +127,11 @@ const AppHeader: React.FC<{
 };
 
 // --- Authenticated App Screen ---
-const AuthenticatedApp: React.FC<{ user: FirebaseUser | null, isGuest: boolean, onSignOut: () => void, theme: Theme, setTheme: (t: Theme) => void }> = ({ user, isGuest, onSignOut, theme, setTheme }) => {
-    const { financialState, setFinancialState, isLoading } = useFinancialState(user, isGuest);
+const AuthenticatedApp: React.FC<{ user: FirebaseUser, onSignOut: () => void, onLinkAccount: () => void, theme: Theme, setTheme: (t: Theme) => void }> = ({ user, onSignOut, onLinkAccount, theme, setTheme }) => {
+    const { financialState, setFinancialState, isLoading } = useFinancialState(user);
     const [activeView, setActiveView] = useState<AppView>('monthly');
     const [isGuideOpen, setGuideOpen] = useState(false);
+    const [initialGuideTab, setInitialGuideTab] = useState<GuideTab>('tutorial');
     const [isOracleOpen, setOracleOpen] = useState(false);
     const [isResetModalOpen, setResetModalOpen] = useState(false);
     const [simulationState, setSimulationState] = useState<FinancialState | null>(null);
@@ -136,7 +140,7 @@ const AuthenticatedApp: React.FC<{ user: FirebaseUser | null, isGuest: boolean, 
 
     const isSimulating = simulationState !== null;
     const isFirstVisit = financialState && !financialState.hasSeenWelcomeGuide;
-    const isNewUserSetup = isFirstVisit && financialState.checkingAccountBalance === 0 && financialState.records.length === 0 && !isGuest;
+    const isNewUserSetup = isFirstVisit && financialState.checkingAccountBalance === 0 && financialState.records.length === 0 && user.isAnonymous;
 
 
     const handleStartSimulation = () => {
@@ -158,9 +162,14 @@ const AuthenticatedApp: React.FC<{ user: FirebaseUser | null, isGuest: boolean, 
 
     useEffect(() => {
         if (isFirstVisit && !isLoading) {
-            setGuideOpen(true);
+            handleOpenGuide('tutorial');
         }
     }, [isFirstVisit, isLoading]);
+
+    const handleOpenGuide = (tab: GuideTab = 'tutorial') => {
+        setInitialGuideTab(tab);
+        setGuideOpen(true);
+    };
 
     const handleCloseGuide = () => {
         if (isFirstVisit) {
@@ -277,11 +286,11 @@ const AuthenticatedApp: React.FC<{ user: FirebaseUser | null, isGuest: boolean, 
             <AppHeader
                 activeView={activeView}
                 onSetView={setActiveView}
-                onOpenHelp={() => setGuideOpen(true)}
+                onOpenHelp={() => handleOpenGuide('tutorial')}
                 onOpenReset={() => setResetModalOpen(true)}
                 user={user}
-                isGuest={isGuest}
                 onSignOut={onSignOut}
+                onLinkAccount={onLinkAccount}
                 isSimulating={isSimulating}
                 theme={theme}
                 setTheme={setTheme}
@@ -306,9 +315,18 @@ const AuthenticatedApp: React.FC<{ user: FirebaseUser | null, isGuest: boolean, 
                         setAppView={setActiveView}
                     />
                 )}
+                 {/* Floating Action Button for Help */}
+                <Button 
+                    variant="primary" 
+                    onClick={() => handleOpenGuide('ask')}
+                    className="fixed bottom-6 right-6 z-20 rounded-full w-14 h-14 shadow-lg animate-pulse"
+                    aria-label="Abrir Guia Interativo"
+                >
+                    <Icon name="help" className="w-8 h-8"/>
+                </Button>
             </main>
             
-            <GuideModal isOpen={isGuideOpen} onClose={handleCloseGuide} onStartTour={startTour} isNewUser={isNewUserSetup} />
+            <GuideModal isOpen={isGuideOpen} onClose={handleCloseGuide} onStartTour={startTour} isNewUser={isNewUserSetup} initialTab={initialGuideTab} />
             <OracleModal isOpen={isOracleOpen} onClose={() => setOracleOpen(false)} state={financialState} />
             <ResetDataModal isOpen={isResetModalOpen} onClose={() => setResetModalOpen(false)} onConfirm={handleResetData} />
             {isTourActive && (
@@ -369,7 +387,6 @@ const ResetDataModal: React.FC<{ isOpen: boolean; onClose: () => void; onConfirm
 // --- Main App Component ---
 function App() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
-    const [isGuest, setIsGuest] = useState(false);
     const [loadingAuthState, setLoadingAuthState] = useState(true);
     const [isAuthenticating, setIsAuthenticating] = useState(false);
     const [authError, setAuthError] = useState<string | null>(null);
@@ -384,12 +401,9 @@ function App() {
         }
 
         const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-            if (currentUser) {
-                setIsGuest(false);
-            }
             setUser(currentUser);
             setLoadingAuthState(false);
-            setIsAuthenticating(false); // Stop spinner on auth state change
+            setIsAuthenticating(false);
         });
         return () => unsubscribe();
     }, []);
@@ -400,7 +414,6 @@ function App() {
         setAuthError(null);
         try {
             await auth.signInWithPopup(googleProvider);
-            // onAuthStateChanged will handle setting the user and stopping the loading spinner.
         } catch (error) {
             console.error("Google Sign-In Error:", error);
             setAuthError("Falha ao entrar. Por favor, tente novamente.");
@@ -408,16 +421,36 @@ function App() {
         }
     };
     
-    const handleContinueAsGuest = () => {
-        setIsGuest(true);
-    }
+    const handleContinueAnonymously = async () => {
+        if (!auth?.app) return;
+        setIsAuthenticating(true);
+        setAuthError(null);
+        try {
+            await auth.signInAnonymously();
+        } catch (error) {
+            console.error("Anonymous Sign-In Error:", error);
+            setAuthError("Falha ao entrar como convidado. Por favor, tente novamente.");
+            setIsAuthenticating(false);
+        }
+    };
+
+    const handleLinkAccount = async () => {
+        if (!auth?.currentUser?.isAnonymous) return;
+        try {
+            await auth.currentUser.linkWithPopup(googleProvider);
+            // Re-fetch user data or rely on onAuthStateChanged to update the UI
+            setUser({ ...auth.currentUser });
+        } catch (error) {
+            console.error("Error linking account:", error);
+            alert("Falha ao vincular conta. Se você já possui uma conta com este email, faça o logout e entre novamente com sua conta do Google.");
+        }
+    };
 
     const handleSignOut = async () => {
-        if(isGuest) {
-            setIsGuest(false);
-        } else if (auth?.app) {
+        if (auth?.app) {
             try {
                 await auth.signOut();
+                setUser(null);
             } catch (error) {
                 console.error("Sign Out Error:", error);
             }
@@ -433,11 +466,11 @@ function App() {
         );
     }
 
-    if (!user && !isGuest) {
-        return <LoginScreen onSignIn={handleSignIn} onContinueAsGuest={handleContinueAsGuest} isAuthenticating={isAuthenticating} error={authError} />;
+    if (!user) {
+        return <LoginScreen onSignIn={handleSignIn} onContinueAsGuest={handleContinueAnonymously} isAuthenticating={isAuthenticating} error={authError} />;
     }
 
-    return <AuthenticatedApp user={user} isGuest={isGuest} onSignOut={handleSignOut} theme={theme} setTheme={setTheme} />;
+    return <AuthenticatedApp user={user} onSignOut={handleSignOut} onLinkAccount={handleLinkAccount} theme={theme} setTheme={setTheme} />;
 }
 
 export default App;

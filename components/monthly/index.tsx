@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { FinancialState, Category, Record as RecordType, AppView, MonthlyAdjustment } from '../../types';
 import { Card, Button, Icon, Input, Modal } from '../common/index.tsx';
@@ -366,15 +367,14 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
             const originalValue = originalRecord?.value ?? 0;
             const sign = category.type === 'income' ? 1 : -1;
 
-            if (wasConfirmed && !isConfirmed) {
-                // Un-confirmed: reverse original value impact
-                balanceChange = -originalValue * sign;
-            } else if (!wasConfirmed && isConfirmed) {
-                // Just confirmed: add new value impact
-                balanceChange = value * sign;
-            } else if (wasConfirmed && isConfirmed) {
-                // Value changed on a confirmed record: adjust by the difference
-                balanceChange = (value - originalValue) * sign;
+            // This logic correctly handles all cases: confirm, un-confirm, and value change.
+            // 1. Revert the old state if it was confirmed.
+            if (wasConfirmed) {
+                balanceChange -= originalValue * sign;
+            }
+            // 2. Apply the new state if it is now confirmed.
+            if (isConfirmed) {
+                balanceChange += value * sign;
             }
 
             // Update record in the array
@@ -480,7 +480,7 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
 
                 {/* Categories & Chart */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-1 space-y-4">
+                    <div className="lg:col-span-1 space-y-4 flex flex-col">
                         <Card>
                             <h3 className="text-lg font-bold mb-2 text-green-600">Entradas</h3>
                             <div className="space-y-1">
@@ -492,9 +492,9 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                                 <Icon name="plus" className="w-4 h-4 mr-1"/> Adicionar Variável
                             </Button>
                         </Card>
-                        <Card>
+                        <Card className="flex flex-col flex-grow">
                              <h3 className="text-lg font-bold mb-2 text-red-600">Saídas</h3>
-                            <div className="space-y-1">
+                            <div className="space-y-1 flex-grow">
                                 {expenseCategories.map((cat, index) => (
                                     <RecordRow key={cat.id} category={cat} record={state.records.find(r => r.categoryId === cat.id && r.month === currentMonth)} projectedValue={derivedData.projectedPlaceholders.get(cat.id) || 0} onUpdate={handleUpdateRecord} isFirst={false}/>
                                 ))}

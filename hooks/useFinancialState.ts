@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import type firebase from 'firebase/compat/app';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -7,7 +6,6 @@ import { FinancialState } from '../types';
 import { INITIAL_FINANCIAL_STATE, BLANK_FINANCIAL_STATE } from '../constants';
 
 const DEBOUNCE_DELAY = 1500; // 1.5 seconds
-const GUEST_STORAGE_KEY = 'fluxo-guest-financial-state';
 
 interface UseFinancialStateReturn {
     financialState: FinancialState | null;
@@ -15,35 +13,14 @@ interface UseFinancialStateReturn {
     isLoading: boolean;
 }
 
-export const useFinancialState = (user: firebase.User | null, isGuest: boolean): UseFinancialStateReturn => {
+export const useFinancialState = (user: firebase.User | null): UseFinancialStateReturn => {
   const [financialState, setFinancialState] = useState<FinancialState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const debounceTimerRef = useRef<number | null>(null);
 
-  // Effect to load data from Firestore or localStorage
+  // Effect to load data from Firestore
   useEffect(() => {
     setIsLoading(true);
-
-    const loadGuestData = () => {
-        try {
-            const savedState = localStorage.getItem(GUEST_STORAGE_KEY);
-            if (savedState) {
-                const parsedState = JSON.parse(savedState);
-                // Ensure hasSeenWelcomeGuide exists
-                if (typeof parsedState.hasSeenWelcomeGuide === 'undefined') {
-                    parsedState.hasSeenWelcomeGuide = false;
-                }
-                setFinancialState(parsedState);
-            } else {
-                setFinancialState(INITIAL_FINANCIAL_STATE);
-            }
-        } catch (error) {
-            console.error("Error loading guest data from localStorage:", error);
-            setFinancialState(INITIAL_FINANCIAL_STATE); // Fallback to initial state
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const fetchOrCreateUserDoc = async (firebaseUser: firebase.User) => {
       const userDocRef = doc(db, 'users', firebaseUser.uid);
@@ -60,25 +37,27 @@ export const useFinancialState = (user: firebase.User | null, isGuest: boolean):
         }
       } catch (error) {
         console.error("Error fetching/creating user document:", error);
+        // Fallback to a blank state on error to prevent app crash
+        setFinancialState(BLANK_FINANCIAL_STATE);
       } finally {
         setIsLoading(false);
       }
     };
     
-    if (isGuest) {
-        loadGuestData();
-    } else if (user) {
+    if (user) {
         fetchOrCreateUserDoc(user);
     } else {
+        // This case should ideally not be hit if auth flow is correct,
+        // as AuthenticatedApp should only render with a user object.
         setFinancialState(null);
         setIsLoading(false);
     }
 
-  }, [user, isGuest]);
+  }, [user]);
 
-  // Effect to save data to Firestore or localStorage with debounce
+  // Effect to save data to Firestore with debounce
   useEffect(() => {
-    if (!financialState || isLoading) {
+    if (!financialState || isLoading || !user) {
       return;
     }
 
@@ -87,23 +66,12 @@ export const useFinancialState = (user: firebase.User | null, isGuest: boolean):
     }
 
     debounceTimerRef.current = window.setTimeout(async () => {
-        if (isGuest) {
-             try {
-                console.log("Autosaving to localStorage...");
-                localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(financialState));
-             } catch (error) {
-                console.error("Failed to save state to localStorage", error);
-             }
-        } else if (user) {
-            try {
-                console.log("Autosaving to Firestore...");
-                const userDocRef = doc(db, 'users', user.uid);
-                // Removed { merge: true } to ensure a complete overwrite, which is
-                // crucial for the reset functionality to work correctly.
-                await setDoc(userDocRef, financialState);
-            } catch (error) {
-                console.error("Failed to save state to Firestore", error);
-            }
+        try {
+            console.log("Autosaving to Firestore...");
+            const userDocRef = doc(db, 'users', user.uid);
+            await setDoc(userDocRef, financialState);
+        } catch (error) {
+            console.error("Failed to save state to Firestore", error);
         }
     }, DEBOUNCE_DELAY);
 
@@ -112,7 +80,7 @@ export const useFinancialState = (user: firebase.User | null, isGuest: boolean):
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [financialState, user, isGuest, isLoading]);
+  }, [financialState, user, isLoading]);
 
   return { financialState, setFinancialState, isLoading };
 };

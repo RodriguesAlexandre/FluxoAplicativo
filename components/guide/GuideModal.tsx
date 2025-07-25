@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Modal, Button, Icon, Input, Spinner } from '../common/index.tsx';
 import { getFeatureExplanation } from '../../services/geminiService';
@@ -194,15 +193,24 @@ const ContactTab: React.FC = () => {
 
 
 // --- Main Guide Modal ---
+export type GuideTab = 'tutorial' | 'ask' | 'contact';
+
 interface GuideModalProps {
   isOpen: boolean;
   onClose: () => void;
   onStartTour: () => void;
   isNewUser: boolean;
+  initialTab?: GuideTab;
 }
 
-export const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, onStartTour, isNewUser }) => {
-    const [activeTab, setActiveTab] = useState<'tutorial' | 'ask' | 'contact'>('tutorial');
+export const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, onStartTour, isNewUser, initialTab = 'tutorial' }) => {
+    const [activeTab, setActiveTab] = useState<GuideTab>(initialTab);
+    
+    useEffect(() => {
+        if (isOpen) {
+            setActiveTab(initialTab);
+        }
+    }, [isOpen, initialTab]);
     
     const tabStyle = "px-4 py-2 font-semibold text-sm rounded-md transition-colors flex-1";
     const activeTabStyle = "bg-white dark:bg-gray-700 text-blue-600 shadow-sm";
