@@ -136,16 +136,14 @@ const AuthenticatedApp: React.FC<{ user: FirebaseUser | null, isGuest: boolean, 
 
     const handleCloseGuide = () => {
         if (isFirstVisit) {
-            setFinancialState(prev => prev ? { ...prev, hasSeenWelcomeGuide: true } : null);
+            setFinancialState(prev => prev ? { ...prev, hasSeenWelcomeGuide: true } : prev);
         }
         setGuideOpen(false);
     };
     
     const handleResetData = () => {
-        if (setFinancialState) {
-            setFinancialState(BLANK_FINANCIAL_STATE);
-            setResetModalOpen(false);
-        }
+        setFinancialState(BLANK_FINANCIAL_STATE);
+        setResetModalOpen(false);
     };
     
     // --- Tour Logic ---
@@ -230,22 +228,6 @@ const AuthenticatedApp: React.FC<{ user: FirebaseUser | null, isGuest: boolean, 
         );
     }
     
-    const setSafeFinancialState: React.Dispatch<React.SetStateAction<FinancialState | null>> = (action) => {
-        setFinancialState(current => {
-            if (current === null && typeof action !== 'function') return action;
-            if (current === null) return null;
-            return typeof action === 'function' ? action(current) : action;
-        });
-    };
-    
-    const setSafeSimulationState: React.Dispatch<React.SetStateAction<FinancialState | null>> = (action) => {
-        setSimulationState(current => {
-            if (current === null && typeof action !== 'function') return action;
-            if (current === null) return null;
-            return typeof action === 'function' ? action(current) : action;
-        });
-    };
-
     return (
         <div className="h-screen w-screen flex flex-col bg-white dark:bg-gray-800">
             <AppHeader
@@ -262,7 +244,7 @@ const AuthenticatedApp: React.FC<{ user: FirebaseUser | null, isGuest: boolean, 
                 {activeView === 'monthly' && (
                     <MonthlyControlView
                         state={isSimulating ? simulationState! : financialState}
-                        setState={isSimulating ? setSafeSimulationState : setSafeFinancialState as React.Dispatch<React.SetStateAction<FinancialState>>}
+                        setState={isSimulating ? setSimulationState : setFinancialState}
                         setAppView={setActiveView}
                         onOpenOracle={() => setOracleOpen(true)}
                         isSimulating={isSimulating}
@@ -274,7 +256,7 @@ const AuthenticatedApp: React.FC<{ user: FirebaseUser | null, isGuest: boolean, 
                 {activeView === 'wealth' && (
                     <WealthPlanningView
                         state={financialState}
-                        setState={setSafeFinancialState}
+                        setState={setFinancialState}
                         setAppView={setActiveView}
                     />
                 )}

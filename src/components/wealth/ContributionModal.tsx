@@ -85,7 +85,7 @@ export const ContributionModal: React.FC<ContributionModalProps> = ({ isOpen, on
                 emergencyFund: { ...prev.emergencyFund, balance: prev.emergencyFund.balance + toEmergency },
                 investments: { ...prev.investments, balance: prev.investments.balance + toInvestments },
                 manualTransactions: [...newTransactions, ...prev.manualTransactions],
-            };
+            }
         });
         
         onClose();

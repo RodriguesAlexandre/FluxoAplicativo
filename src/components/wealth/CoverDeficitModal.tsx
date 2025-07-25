@@ -82,7 +82,7 @@ export const CoverDeficitModal: React.FC<CoverDeficitModalProps> = ({ isOpen, on
                 emergencyFund: { ...prev.emergencyFund, balance: prev.emergencyFund.balance - withdrawalFromEF },
                 investments: { ...prev.investments, balance: prev.investments.balance - withdrawalFromInv },
                 manualTransactions: [...newTransactions, ...prev.manualTransactions],
-            };
+            }
         });
 
         onClose();

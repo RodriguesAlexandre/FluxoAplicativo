@@ -76,7 +76,7 @@ export const DistributeBalanceModal: React.FC<DistributeBalanceModalProps> = ({ 
                 emergencyFund: { ...prev.emergencyFund, balance: prev.emergencyFund.balance + amountEF },
                 investments: { ...prev.investments, balance: prev.investments.balance + amountInv },
                 manualTransactions: [...newTransactions, ...prev.manualTransactions],
-            };
+            }
         });
 
         onClose();

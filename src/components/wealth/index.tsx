@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { FinancialState, Asset, AppView, ManualTransaction, DeficitStrategy } from '@/types';
 import { Card, Button, Icon, Input, Modal } from '@/components/common';
 import { WealthProjectionChart } from '@/components/charts';
@@ -52,7 +52,7 @@ const ManualTransactionModal: React.FC<{
         if (isNaN(numericAmount) || numericAmount <= 0) return;
 
         setState(prev => {
-            if (!prev) return prev;
+            if (!prev) return null;
             const newTransaction: ManualTransaction = {
                 id: `manual_${new Date().getTime()}`,
                 account,
@@ -121,7 +121,7 @@ const AssetModal: React.FC<{
         if (name.trim() === '' || isNaN(numericValue) || numericValue < 0) return;
 
         setState(prev => {
-            if (!prev) return prev;
+            if (!prev) return null;
             const newAsset: Asset = {
                 id: `asset_${new Date().getTime()}`,
                 name: name.trim(),
@@ -269,11 +269,11 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
     };
 
     const handleDeleteAsset = (id: string) => {
-        setState(prev => (!prev ? prev : {...prev, assets: prev.assets.filter(a => a.id !== id)}));
+        setState(prev => !prev ? null : {...prev, assets: prev.assets.filter(a => a.id !== id)});
     };
     
     const handleStrategyChange = (change: Partial<Pick<FinancialState, 'surplusAllocation' | 'deficitStrategy'>>) => {
-        setState(prev => (!prev ? prev : { ...prev, ...change }));
+        setState(prev => !prev ? null : { ...prev, ...change });
         // Automatically switch to projection view to give immediate feedback
         setProjectionMode('projected');
     };

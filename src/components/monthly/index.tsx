@@ -278,7 +278,7 @@ const AdjustmentModal: React.FC<{
 // --- Main View ---
 interface MonthlyControlViewProps {
     state: FinancialState;
-    setState: React.Dispatch<React.SetStateAction<FinancialState>>;
+    setState: React.Dispatch<React.SetStateAction<FinancialState | null>>;
     setAppView: (view: AppView) => void;
     onOpenOracle: () => void;
     isSimulating: boolean;
@@ -392,7 +392,7 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
     }, [setState, currentMonth]);
     
     const handleUpdateCategories = (newCategories: Category[]) => {
-        setState(prev => prev ? ({...prev, categories: newCategories}) : null);
+        setState(prev => prev ? ({...prev, categories: newCategories}) : prev);
     };
     
     const handleAddAdjustment = (data: Omit<MonthlyAdjustment, 'id' | 'startMonth'>) => {
@@ -402,14 +402,14 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                 ...prev.monthlyAdjustments,
                 { ...data, id: `adj_${new Date().getTime()}`, startMonth: currentMonth }
             ]
-        }) : null)
+        }) : prev)
     };
     
     const handleDeleteAdjustment = (id: string) => {
         setState(prev => prev ? ({
             ...prev,
             monthlyAdjustments: prev.monthlyAdjustments.filter(a => a.id !== id)
-        }) : null)
+        }) : prev)
     }
 
     const handleMonthChange = (e: React.MouseEvent<HTMLButtonElement>, direction: 'prev' | 'next') => {
@@ -544,8 +544,8 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
 
             {/* Modals */}
             <CategorySettingsModal isOpen={isCategoryModalOpen} onClose={() => setCategoryModalOpen(false)} categories={state.categories} onUpdate={handleUpdateCategories} />
-            <DistributeBalanceModal isOpen={isDistributeModalOpen} onClose={() => setDistributeModalOpen(false)} state={state} setState={setState as React.Dispatch<React.SetStateAction<FinancialState | null>>} actualBalance={state.checkingAccountBalance} realizedPerformance={derivedData.performanceRealizada} />
-            <WealthSettingsModal isOpen={isWealthSettingsModalOpen} onClose={() => setWealthSettingsModalOpen(false)} state={state} setState={setState as React.Dispatch<React.SetStateAction<FinancialState | null>>} />
+            <DistributeBalanceModal isOpen={isDistributeModalOpen} onClose={() => setDistributeModalOpen(false)} state={state} setState={setState} actualBalance={state.checkingAccountBalance} realizedPerformance={derivedData.performanceRealizada} />
+            <WealthSettingsModal isOpen={isWealthSettingsModalOpen} onClose={() => setWealthSettingsModalOpen(false)} state={state} setState={setState} />
             <AdjustmentModal isOpen={adjustmentModal.isOpen} onClose={() => setAdjustmentModal({ isOpen: false, type: 'income'})} onSave={handleAddAdjustment} type={adjustmentModal.type} currentMonth={currentMonth} />
         </div>
     );
