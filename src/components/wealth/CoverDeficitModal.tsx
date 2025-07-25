@@ -8,7 +8,7 @@ interface CoverDeficitModalProps {
   isOpen: boolean;
   onClose: () => void;
   state: FinancialState;
-  setState: React.Dispatch<React.SetStateAction<FinancialState>>;
+  setState: React.Dispatch<React.SetStateAction<FinancialState | null>>;
   projectedDeficit: number;
 }
 
@@ -74,13 +74,16 @@ export const CoverDeficitModal: React.FC<CoverDeficitModalProps> = ({ isOpen, on
             });
         }
 
-        setState(prev => ({
-            ...prev,
-            checkingAccountBalance: prev.checkingAccountBalance + amountToTransfer,
-            emergencyFund: { ...prev.emergencyFund, balance: prev.emergencyFund.balance - withdrawalFromEF },
-            investments: { ...prev.investments, balance: prev.investments.balance - withdrawalFromInv },
-            manualTransactions: [...newTransactions, ...prev.manualTransactions],
-        }));
+        setState(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                checkingAccountBalance: prev.checkingAccountBalance + amountToTransfer,
+                emergencyFund: { ...prev.emergencyFund, balance: prev.emergencyFund.balance - withdrawalFromEF },
+                investments: { ...prev.investments, balance: prev.investments.balance - withdrawalFromInv },
+                manualTransactions: [...newTransactions, ...prev.manualTransactions],
+            };
+        });
 
         onClose();
     };

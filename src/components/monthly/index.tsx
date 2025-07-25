@@ -544,8 +544,8 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
 
             {/* Modals */}
             <CategorySettingsModal isOpen={isCategoryModalOpen} onClose={() => setCategoryModalOpen(false)} categories={state.categories} onUpdate={handleUpdateCategories} />
-            <DistributeBalanceModal isOpen={isDistributeModalOpen} onClose={() => setDistributeModalOpen(false)} state={state} setState={setState} actualBalance={state.checkingAccountBalance} realizedPerformance={derivedData.performanceRealizada} />
-            <WealthSettingsModal isOpen={isWealthSettingsModalOpen} onClose={() => setWealthSettingsModalOpen(false)} state={state} setState={setState} />
+            <DistributeBalanceModal isOpen={isDistributeModalOpen} onClose={() => setDistributeModalOpen(false)} state={state} setState={setState as React.Dispatch<React.SetStateAction<FinancialState | null>>} actualBalance={state.checkingAccountBalance} realizedPerformance={derivedData.performanceRealizada} />
+            <WealthSettingsModal isOpen={isWealthSettingsModalOpen} onClose={() => setWealthSettingsModalOpen(false)} state={state} setState={setState as React.Dispatch<React.SetStateAction<FinancialState | null>>} />
             <AdjustmentModal isOpen={adjustmentModal.isOpen} onClose={() => setAdjustmentModal({ isOpen: false, type: 'income'})} onSave={handleAddAdjustment} type={adjustmentModal.type} currentMonth={currentMonth} />
         </div>
     );

@@ -262,7 +262,7 @@ const AuthenticatedApp: React.FC<{ user: FirebaseUser | null, isGuest: boolean, 
                 {activeView === 'monthly' && (
                     <MonthlyControlView
                         state={isSimulating ? simulationState! : financialState}
-                        setState={isSimulating ? setSafeSimulationState : setSafeFinancialState}
+                        setState={isSimulating ? setSafeSimulationState : setSafeFinancialState as React.Dispatch<React.SetStateAction<FinancialState>>}
                         setAppView={setActiveView}
                         onOpenOracle={() => setOracleOpen(true)}
                         isSimulating={isSimulating}

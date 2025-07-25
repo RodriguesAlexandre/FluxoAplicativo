@@ -6,7 +6,7 @@ export const WealthSettingsModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
     state: FinancialState;
-    setState: React.Dispatch<React.SetStateAction<FinancialState>>;
+    setState: React.Dispatch<React.SetStateAction<FinancialState | null>>;
 }> = ({isOpen, onClose, state: initialState, setState}) => {
     const [localState, setLocalState] = useState(initialState);
 

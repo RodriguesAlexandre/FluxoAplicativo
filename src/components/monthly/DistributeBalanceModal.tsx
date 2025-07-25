@@ -8,7 +8,7 @@ interface DistributeBalanceModalProps {
   isOpen: boolean;
   onClose: () => void;
   state: FinancialState;
-  setState: React.Dispatch<React.SetStateAction<FinancialState>>;
+  setState: React.Dispatch<React.SetStateAction<FinancialState | null>>;
   actualBalance: number;
   realizedPerformance?: number;
 }
@@ -68,13 +68,16 @@ export const DistributeBalanceModal: React.FC<DistributeBalanceModalProps> = ({ 
             });
         }
 
-        setState(prev => ({
-            ...prev,
-            checkingAccountBalance: prev.checkingAccountBalance - totalDistribution,
-            emergencyFund: { ...prev.emergencyFund, balance: prev.emergencyFund.balance + amountEF },
-            investments: { ...prev.investments, balance: prev.investments.balance + amountInv },
-            manualTransactions: [...newTransactions, ...prev.manualTransactions],
-        }));
+        setState(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                checkingAccountBalance: prev.checkingAccountBalance - totalDistribution,
+                emergencyFund: { ...prev.emergencyFund, balance: prev.emergencyFund.balance + amountEF },
+                investments: { ...prev.investments, balance: prev.investments.balance + amountInv },
+                manualTransactions: [...newTransactions, ...prev.manualTransactions],
+            };
+        });
 
         onClose();
     };

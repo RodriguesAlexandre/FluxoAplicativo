@@ -60,6 +60,7 @@ export const OracleModal: React.FC<OracleModalProps> = ({ isOpen, onClose, state
     if (isOpen) {
       fetchAnalysis();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, state]);
 
   const renderContent = () => {
