@@ -1,4 +1,4 @@
-import { FinancialState, Record as RecordType } from './types';
+import { FinancialState, Record as RecordType, FinancialGoal } from './types';
 
 export const addMonths = (dateStr: string, months: number): string => {
     const date = new Date(dateStr + '-02T00:00:00Z'); // Use UTC to avoid timezone issues
@@ -135,4 +135,36 @@ export const calculateProjections = (state: FinancialState): FinancialProjection
     const averageFutureExpense = futureExpenseSum / 12;
 
     return { monthlyDetails, averageFutureSurplus, averageFutureExpense };
+};
+
+export const calculateGoalProjection = (
+    goal: FinancialGoal,
+    investmentRate: number
+): number | null => {
+    if (goal.targetValue <= goal.currentValue) {
+        return 0; // Goal already reached
+    }
+    if (goal.monthlyContribution <= 0) {
+        return null; // Goal will never be reached without contributions
+    }
+
+    let months = 0;
+    let currentValue = goal.currentValue;
+    const monthlyInterestRate = investmentRate / 100;
+
+    while (currentValue < goal.targetValue) {
+        // Add contribution at the beginning of the month
+        currentValue += goal.monthlyContribution;
+        // Accrue interest on the new total
+        currentValue *= (1 + monthlyInterestRate);
+        
+        months++;
+
+        // Safety break to prevent infinite loops, e.g., 100 years
+        if (months > 1200) {
+            return null;
+        }
+    }
+
+    return months;
 };

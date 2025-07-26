@@ -1,4 +1,3 @@
-
 export interface Category {
   id: string;
   name: string;
@@ -46,6 +45,14 @@ export interface ManualTransaction {
     description: string;
 }
 
+export interface FinancialGoal {
+  id: string;
+  name: string;
+  targetValue: number;
+  currentValue: number;
+  monthlyContribution: number;
+}
+
 export interface FinancialState {
     checkingAccountBalance: number;
     categories: Category[];
@@ -71,6 +78,7 @@ export interface FinancialState {
     deficitStrategy: DeficitStrategy;
     manualTransactions: ManualTransaction[];
     hasSeenWelcomeGuide: boolean;
+    financialGoals: FinancialGoal[];
 }
 
 export type AppView = 'monthly' | 'wealth';

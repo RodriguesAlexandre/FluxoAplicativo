@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { FinancialState, Asset, AppView, ManualTransaction, DeficitStrategy, SurplusAllocation } from '../../types';
+import { FinancialState, Asset, AppView, ManualTransaction, DeficitStrategy, SurplusAllocation, FinancialGoal } from '../../types';
 import { Card, Button, Icon, Input, Modal, EmptyState } from '../common/index.tsx';
 import { WealthProjectionChart } from '../charts/index.tsx';
-import { calculateProjections } from '../../services/financialProjection';
+import { calculateProjections, calculateGoalProjection } from '../../services/financialProjection';
 import { WealthSettingsModal } from './WealthSettingsModal';
 import { ContributionModal } from './ContributionModal';
 import { CoverDeficitModal } from './CoverDeficitModal';
+import { GoalModal } from './GoalModal';
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
@@ -170,6 +171,7 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
     const [projectionMode, setProjectionMode] = useState<'real' | 'projected'>('real');
     const [isContributionModalOpen, setIsContributionModalOpen] = useState(false);
     const [isDeficitModalOpen, setIsDeficitModalOpen] = useState(false);
+    const [goalModalState, setGoalModalState] = useState<{ isOpen: boolean, goalToEdit?: FinancialGoal }>({ isOpen: false });
 
 
     const { averageFutureSurplus, averageFutureExpense } = useMemo(() => {
@@ -291,9 +293,44 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
         handleStrategyChange({ deficitStrategy: strategy });
     };
 
+    const handleSaveGoal = (goal: FinancialGoal) => {
+        setState(prev => {
+            const existingIndex = prev.financialGoals.findIndex(g => g.id === goal.id);
+            if (existingIndex > -1) {
+                const newGoals = [...prev.financialGoals];
+                newGoals[existingIndex] = goal;
+                return { ...prev, financialGoals: newGoals };
+            } else {
+                return { ...prev, financialGoals: [...prev.financialGoals, goal] };
+            }
+        });
+        setGoalModalState({ isOpen: false });
+    };
+
+    const handleDeleteGoal = (goalId: string) => {
+        setState(prev => ({
+            ...prev,
+            financialGoals: prev.financialGoals.filter(g => g.id !== goalId)
+        }));
+    };
+
     const chartLabels = projectionMode === 'real'
         ? { principal: 'Patrimônio Inicial', growth: 'Crescimento (Juros)' }
         : { principal: 'Total Aportado', growth: 'Crescimento (Juros)' };
+
+    const formatMonthsToYears = (months: number | null) => {
+        if (months === null) return "Nunca (com aporte atual)";
+        if (months === 0) return "Atingida!";
+        const years = Math.floor(months / 12);
+        const remainingMonths = months % 12;
+        let result = '';
+        if (years > 0) result += `${years} ano${years > 1 ? 's' : ''}`;
+        if (remainingMonths > 0) {
+            if (years > 0) result += ' e ';
+            result += `${remainingMonths} mes${remainingMonths > 1 ? 'es' : ''}`;
+        }
+        return result;
+    };
 
     return (
         <div className="p-4 sm:p-6 space-y-6">
@@ -357,6 +394,53 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
                         <Button size="sm" variant="ghost" className="w-full text-red-600" onClick={() => handleOpenTransaction('investments', 'withdrawal')}><Icon name="minus" className="w-4 h-4 mr-1"/>Resgatar</Button>
                     </div>
                 </WealthMetricCard>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card className="lg:col-span-3">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-bold">Minhas Metas</h3>
+                        <Button onClick={() => setGoalModalState({ isOpen: true })}>
+                            <Icon name="plus" className="w-4 h-4 mr-2" />
+                            Adicionar Meta
+                        </Button>
+                    </div>
+                    {state.financialGoals.length > 0 ? (
+                        <div className="space-y-6">
+                            {state.financialGoals.map(goal => {
+                                const monthsToGoal = calculateGoalProjection(goal, state.investments.settings.monthlyInterestRate);
+                                const percentage = goal.targetValue > 0 ? (goal.currentValue / goal.targetValue) * 100 : 0;
+                                return (
+                                <div key={goal.id} className="group">
+                                    <div className="flex justify-between items-baseline mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <Icon name="target" className="w-5 h-5 text-blue-500" />
+                                            <span className="font-bold">{goal.name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                                                {formatCurrency(goal.currentValue)} / {formatCurrency(goal.targetValue)}
+                                            </span>
+                                             <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity !p-1" onClick={() => setGoalModalState({ isOpen: true, goalToEdit: goal })}><Icon name="edit" className="w-4 h-4" /></Button>
+                                             <Button variant="danger-ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity !p-1" onClick={() => handleDeleteGoal(goal.id)}><Icon name="trash" className="w-4 h-4" /></Button>
+                                        </div>
+                                    </div>
+                                    <ProgressBar value={goal.currentValue} max={goal.targetValue} />
+                                    <div className="text-xs text-right mt-1 text-gray-500 dark:text-gray-400">
+                                        <p>
+                                            <span className="font-semibold">{percentage.toFixed(1)}%</span> completo.
+                                            <span className="ml-2">Tempo estimado: <strong>{formatMonthsToYears(monthsToGoal)}</strong></span>
+                                        </p>
+                                    </div>
+                                </div>
+                            )})}
+                        </div>
+                    ) : (
+                        <EmptyState icon="target" title="Nenhuma Meta Financeira Criada">
+                            <p>Crie metas como "Comprar um carro" ou "Viagem dos sonhos" para ver quanto tempo levará para alcançá-las!</p>
+                        </EmptyState>
+                    )}
+                </Card>
             </div>
 
              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -500,6 +584,15 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
                     state={state}
                     setState={setState}
                     projectedDeficit={averageFutureSurplus}
+                />
+            )}
+             {goalModalState.isOpen && (
+                <GoalModal
+                    isOpen={goalModalState.isOpen}
+                    onClose={() => setGoalModalState({ isOpen: false })}
+                    onSave={handleSaveGoal}
+                    goalToEdit={goalModalState.goalToEdit}
+                    averageFutureSurplus={averageFutureSurplus}
                 />
             )}
         </div>

@@ -1,4 +1,3 @@
-
 import { FinancialState, Category } from './types';
 
 const defaultCategories: Category[] = [
@@ -47,6 +46,7 @@ export const INITIAL_FINANCIAL_STATE: FinancialState = {
     deficitStrategy: 'emergency_first',
     manualTransactions: [],
     hasSeenWelcomeGuide: false,
+    financialGoals: [],
 };
 
 
@@ -79,4 +79,5 @@ export const BLANK_FINANCIAL_STATE: FinancialState = {
     deficitStrategy: 'emergency_first',
     manualTransactions: [],
     hasSeenWelcomeGuide: true, // A user resetting has already seen the guide
+    financialGoals: [],
 };

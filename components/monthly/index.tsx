@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { FinancialState, Category, Record as RecordType, AppView, MonthlyAdjustment } from '../../types';
 import { Card, Button, Icon, Input, Modal } from '../common/index.tsx';
@@ -102,7 +101,7 @@ const RecordRow: React.FC<{
             >
                 {isConfirmed && <Icon name="check" className="w-4 h-4 text-white" />}
             </button>
-            <span className={`flex-1 ${isConfirmed ? 'opacity-60' : ''} ${isVariable ? 'italic' : ''}`}>{label}</span>
+            <span className={`flex-1 ${isConfirmed ? 'opacity-60' : ''} ${isVariable ? 'italic' : ''}`} dangerouslySetInnerHTML={{ __html: label }}></span>
             <div className="flex items-center gap-2 w-32">
                  <span className={`text-sm ${isConfirmed ? 'opacity-60' : 'text-gray-500 dark:text-gray-400'}`}>R$</span>
                 <input
@@ -448,6 +447,16 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
         e.currentTarget.blur();
     };
 
+    const getAdjustmentLabel = (adj: MonthlyAdjustment) => {
+        let label = adj.description;
+        if (adj.endMonth) {
+            const endDate = new Date(adj.endMonth + '-02');
+            const formattedDate = endDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+            label += ` <span class="text-gray-400 text-xs">(até ${formattedDate})</span>`;
+        }
+        return label;
+    };
+
     const incomeCategories = state.categories.filter(c => c.type === 'income');
     const expenseCategories = state.categories.filter(c => c.type === 'expense');
     
@@ -536,7 +545,7 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                                     <RecordRow
                                         key={adj.id}
                                         id={adj.id}
-                                        label={adj.description}
+                                        label={getAdjustmentLabel(adj)}
                                         value={adj.value}
                                         status={adj.status}
                                         isProjected={false}
@@ -576,7 +585,7 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                                     <RecordRow
                                         key={adj.id}
                                         id={adj.id}
-                                        label={adj.description}
+                                        label={getAdjustmentLabel(adj)}
                                         value={adj.value}
                                         status={adj.status}
                                         isProjected={false}
