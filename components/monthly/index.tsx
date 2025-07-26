@@ -56,6 +56,103 @@ const BridgeCard: React.FC<{ value: number }> = ({ value }) => (
 );
 
 
+const FixedCategoryRow: React.FC<{
+    cat: Category;
+    record: RecordType | undefined;
+    isEditing: boolean;
+    editingName: string;
+    onNameChange: (newName: string) => void;
+    onStartEdit: (cat: Category) => void;
+    onUpdateName: (id: string) => void;
+    onCancelEdit: () => void;
+    onDelete: (id: string) => void;
+    onUpdateRecord: (id: string, value: number, status: 'pending' | 'confirmed') => void;
+    isFirst: boolean;
+    projectedValue: number;
+}> = ({ cat, record, isEditing, editingName, onNameChange, onStartEdit, onUpdateName, onCancelEdit, onDelete, onUpdateRecord, isFirst, projectedValue }) => {
+    
+    const valueToDisplay = record ? record.value : projectedValue;
+    const [inputValue, setInputValue] = useState(valueToDisplay.toString());
+
+    useEffect(() => {
+        setInputValue(valueToDisplay.toString());
+    }, [valueToDisplay]);
+
+    const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setInputValue(e.target.value);
+    };
+
+    const handleBlur = () => {
+        const numericValue = parseFloat(inputValue);
+        if (!isNaN(numericValue)) {
+            onUpdateRecord(cat.id, numericValue, record?.status ?? 'pending');
+        } else if (inputValue === '') {
+            onUpdateRecord(cat.id, 0, record?.status ?? 'pending');
+        }
+    };
+
+    const toggleStatus = () => {
+        onUpdateRecord(cat.id, valueToDisplay, (record?.status ?? 'pending') === 'confirmed' ? 'pending' : 'confirmed');
+    };
+
+    const isConfirmed = record?.status === 'confirmed';
+
+    return (
+        <div className={`group flex items-center gap-2 p-2 rounded-lg transition-colors ${isConfirmed ? 'bg-green-50 dark:bg-green-900/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700/50'}`}>
+            <button
+                onClick={toggleStatus}
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${isConfirmed ? 'bg-green-500 border-green-500' : 'border-gray-400'}`}
+                aria-label={isConfirmed ? 'Marcar como pendente' : 'Marcar como confirmado'}
+                data-tour-id={isFirst ? 'confirmar-transacao' : undefined}
+            >
+                {isConfirmed && <Icon name="check" className="w-4 h-4 text-white" />}
+            </button>
+
+            <div className="flex-1">
+                {isEditing ? (
+                    <Input
+                        value={editingName}
+                        onChange={(e) => onNameChange(e.target.value)}
+                        onBlur={() => onUpdateName(cat.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') onUpdateName(cat.id); if (e.key === 'Escape') onCancelEdit(); }}
+                        autoFocus
+                        className="py-1 h-8"
+                    />
+                ) : (
+                    <span className={`flex-1 ${isConfirmed ? 'opacity-60' : ''}`}>{cat.name}</span>
+                )}
+            </div>
+
+            <div className="flex items-center gap-2 w-32">
+                <span className={`text-sm ${isConfirmed ? 'opacity-60' : 'text-gray-500 dark:text-gray-400'}`}>R$</span>
+                <input
+                    type="number"
+                    value={inputValue}
+                    onChange={handleValueChange}
+                    onBlur={handleBlur}
+                    placeholder="0.00"
+                    className={`w-full text-right bg-transparent outline-none font-semibold ${!record && !isConfirmed ? 'text-gray-400 italic' : ''} ${isConfirmed ? 'opacity-60' : ''}`}
+                    aria-label={`Valor para ${cat.name}`}
+                    disabled={isEditing}
+                />
+            </div>
+
+            <div className="flex items-center gap-1 w-12 justify-end">
+                {!isEditing && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => onStartEdit(cat)} aria-label={`Editar ${cat.name}`}>
+                            <Icon name="edit" className="w-4 h-4 text-blue-500 hover:text-blue-700"/>
+                        </button>
+                        <button onClick={() => onDelete(cat.id)} aria-label={`Deletar ${cat.name}`}>
+                            <Icon name="trash" className="w-4 h-4 text-red-500 hover:text-red-700"/>
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const RecordRow: React.FC<{
     id: string;
     label: string;
@@ -134,116 +231,6 @@ const RecordRow: React.FC<{
     );
 };
 
-const CategorySettingsModal: React.FC<{
-    categories: Category[];
-    onUpdate: (newCategories: Category[]) => void;
-    isOpen: boolean;
-    onClose: () => void;
-}> = ({ categories: initialCategories, onUpdate, isOpen, onClose }) => {
-    const [categories, setCategories] = useState(initialCategories);
-    const [newCatName, setNewCatName] = useState('');
-    const [newCatType, setNewCatType] = useState<'income' | 'expense'>('expense');
-    const [editingCatId, setEditingCatId] = useState<string | null>(null);
-    const [editingCatName, setEditingCatName] = useState('');
-
-    React.useEffect(() => {
-        if (isOpen) {
-            setCategories(initialCategories);
-            setEditingCatId(null);
-        }
-    }, [initialCategories, isOpen]);
-
-    const handleSave = () => {
-        onUpdate(categories);
-        onClose();
-    };
-    
-    const handleStartEdit = (cat: Category) => {
-        setEditingCatId(cat.id);
-        setEditingCatName(cat.name);
-    }
-    
-    const handleCancelEdit = () => {
-        setEditingCatId(null);
-        setEditingCatName('');
-    }
-
-    const handleUpdateCatName = (id: string) => {
-        if (!editingCatName.trim()) return;
-        setCategories(cats => cats.map(c => c.id === id ? { ...c, name: editingCatName.trim() } : c));
-        handleCancelEdit();
-    };
-
-    const addCategory = () => {
-        if (newCatName.trim() === '') return;
-        const newCategory: Category = {
-            id: `cat_${new Date().getTime()}`,
-            name: newCatName.trim(),
-            type: newCatType,
-        };
-        setCategories([...categories, newCategory]);
-        setNewCatName('');
-    };
-    
-    const removeCategory = (id: string) => {
-        setCategories(categories.filter(c => c.id !== id));
-    };
-
-    const renderCategoryList = (list: Category[]) => (
-        list.map(cat => (
-            <div key={cat.id} className="group flex justify-between items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
-                {editingCatId === cat.id ? (
-                    <Input 
-                        value={editingCatName}
-                        onChange={(e) => setEditingCatName(e.target.value)}
-                        onBlur={() => handleUpdateCatName(cat.id)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleUpdateCatName(cat.id); if (e.key === 'Escape') handleCancelEdit(); }}
-                        autoFocus
-                    />
-                ) : (
-                    <span>{cat.name}</span>
-                )}
-                <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => editingCatId === cat.id ? handleCancelEdit() : handleStartEdit(cat)}><Icon name={editingCatId === cat.id ? 'close' : 'edit'} className="w-4 h-4 text-gray-500"/></Button>
-                    <Button variant="ghost" size="sm" onClick={() => removeCategory(cat.id)}><Icon name="trash" className="w-4 h-4 text-red-500"/></Button>
-                </div>
-            </div>
-        ))
-    );
-
-    const incomeCategories = categories.filter(c => c.type === 'income');
-    const expenseCategories = categories.filter(c => c.type === 'expense');
-
-    return (
-        <Modal title="Gerenciar Categorias" isOpen={isOpen} onClose={onClose}>
-            <div className="space-y-4">
-                <h3 className="font-bold text-lg">Adicionar Nova Categoria</h3>
-                <Input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Ex: Educação, Investimentos" />
-                <div className="flex gap-2">
-                    <Button onClick={() => setNewCatType('income')} variant={newCatType === 'income' ? 'primary' : 'secondary'} className="flex-1">Receita</Button>
-                    <Button onClick={() => setNewCatType('expense')} variant={newCatType === 'expense' ? 'primary' : 'secondary'} className="flex-1">Despesa</Button>
-                </div>
-                <Button onClick={addCategory} className="w-full">Adicionar</Button>
-            </div>
-            <hr className="my-6 border-gray-200 dark:border-gray-700"/>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <h3 className="font-bold text-lg text-green-600">Entradas</h3>
-                    {renderCategoryList(incomeCategories)}
-                </div>
-                 <div className="space-y-2">
-                    <h3 className="font-bold text-lg text-red-600">Saídas</h3>
-                    {renderCategoryList(expenseCategories)}
-                </div>
-            </div>
-            <div className="mt-6 flex justify-end gap-2">
-                <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-                <Button onClick={handleSave}>Salvar Alterações</Button>
-            </div>
-        </Modal>
-    );
-};
-
 // --- Main View ---
 interface MonthlyControlViewProps {
     state: FinancialState;
@@ -257,10 +244,15 @@ interface MonthlyControlViewProps {
 }
 export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, setState, onOpenOracle, isSimulating, onStartSimulation, onSaveChanges, onDiscardChanges }) => {
     const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
-    const [isCategoryModalOpen, setCategoryModalOpen] = useState(false);
     const [isDistributeModalOpen, setDistributeModalOpen] = useState(false);
     const [isWealthSettingsModalOpen, setWealthSettingsModalOpen] = useState(false);
     const [adjustmentModalState, setAdjustmentModalState] = useState<{ isOpen: boolean; type: 'income' | 'expense', adjustmentToEdit?: MonthlyAdjustment }>({ isOpen: false, type: 'income' });
+    
+    // State for inline category management
+    const [newIncomeCatName, setNewIncomeCatName] = useState('');
+    const [newExpenseCatName, setNewExpenseCatName] = useState('');
+    const [editingCatId, setEditingCatId] = useState<string | null>(null);
+    const [editingCatName, setEditingCatName] = useState('');
 
 
     const derivedData = useMemo(() => {
@@ -389,10 +381,86 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
         });
     }, [setState]);
     
-    const handleUpdateCategories = (newCategories: Category[]) => {
-        setState(prev => prev ? ({...prev, categories: newCategories}) : null);
+    // --- New Category Management Handlers ---
+
+    const handleAddCategory = (type: 'income' | 'expense') => {
+        const name = (type === 'income' ? newIncomeCatName : newExpenseCatName).trim();
+        if (!name) return;
+
+        setState(prev => {
+            if (!prev) return prev;
+            if (prev.categories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+                alert(`A categoria "${name}" já existe.`);
+                return prev;
+            }
+
+            const newCategory: Category = { id: `cat_${new Date().getTime()}`, name, type };
+            return { ...prev, categories: [...prev.categories, newCategory] };
+        });
+
+        if (type === 'income') setNewIncomeCatName('');
+        else setNewExpenseCatName('');
     };
     
+    const handleDeleteCategory = (categoryId: string) => {
+        setState(prev => {
+            if (!prev) return prev;
+            const categoryToDelete = prev.categories.find(c => c.id === categoryId);
+            if (!categoryToDelete) return prev;
+
+            const confirmation = window.confirm(`Tem certeza que deseja excluir a categoria "${categoryToDelete.name}"?\n\nTODOS os registros financeiros associados a ela (em todos os meses) serão permanentemente removidos. Esta ação não pode ser desfeita.`);
+            if (!confirmation) return prev;
+
+            const recordsToDelete = prev.records.filter(r => r.categoryId === categoryId);
+            let balanceAdjustment = 0;
+            recordsToDelete.forEach(rec => {
+                if (rec.status === 'confirmed') {
+                    const sign = categoryToDelete.type === 'income' ? 1 : -1;
+                    balanceAdjustment -= rec.value * sign;
+                }
+            });
+
+            return {
+                ...prev,
+                categories: prev.categories.filter(c => c.id !== categoryId),
+                records: prev.records.filter(r => r.categoryId !== categoryId),
+                checkingAccountBalance: prev.checkingAccountBalance + balanceAdjustment,
+            };
+        });
+    };
+    
+    const handleStartEdit = (cat: Category) => {
+        setEditingCatId(cat.id);
+        setEditingCatName(cat.name);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingCatId(null);
+        setEditingCatName('');
+    };
+
+    const handleUpdateCategoryName = (categoryId: string) => {
+        const newName = editingCatName.trim();
+        if (!newName) {
+            handleCancelEdit();
+            return;
+        }
+
+        setState(prev => {
+            if (!prev) return prev;
+            if (prev.categories.some(c => c.id !== categoryId && c.name.toLowerCase() === newName.toLowerCase())) {
+                alert(`A categoria "${newName}" já existe.`);
+                return prev;
+            }
+            return {
+                ...prev,
+                categories: prev.categories.map(c => c.id === categoryId ? { ...c, name: newName } : c),
+            };
+        });
+        handleCancelEdit();
+    };
+
+
     const handleSaveAdjustment = (data: Omit<MonthlyAdjustment, 'id' | 'startMonth' | 'status'>, id?: string) => {
         setState(prev => {
             if (!prev) return prev;
@@ -469,10 +537,6 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                             <Icon name="settings" className="w-5 h-5 sm:mr-2"/>
                             <span className="hidden sm:inline">Saldos e Metas</span>
                         </Button>
-                        <Button variant="secondary" onClick={() => setCategoryModalOpen(true)} className="flex-1 sm:flex-none">
-                             <Icon name="edit" className="w-5 h-5 sm:mr-2"/>
-                             <span className="hidden sm:inline">Categorias</span>
-                        </Button>
                         <Button variant="secondary" onClick={onOpenOracle} className="flex-1 sm:flex-none">
                             <Icon name="oracle" className="w-5 h-5 sm:mr-2"/>
                             <span className="hidden sm:inline">Oráculo</span>
@@ -511,19 +575,21 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                                 {incomeCategories.map((cat, index) => {
                                     const record = state.records.find(r => r.categoryId === cat.id && r.month === currentMonth);
                                     const projectedValue = derivedData.projectedPlaceholders.get(cat.id) || 0;
-                                    const valueToDisplay = record ? record.value : projectedValue;
-
                                     return (
-                                        <RecordRow 
-                                            key={cat.id} 
-                                            id={cat.id}
-                                            label={cat.name}
-                                            value={valueToDisplay}
-                                            status={record?.status ?? 'pending'}
-                                            isProjected={!record}
-                                            onUpdate={handleUpdateRecord}
+                                        <FixedCategoryRow
+                                            key={cat.id}
+                                            cat={cat}
+                                            record={record}
+                                            projectedValue={projectedValue}
+                                            isEditing={editingCatId === cat.id}
+                                            editingName={editingCatName}
+                                            onNameChange={setEditingCatName}
+                                            onStartEdit={handleStartEdit}
+                                            onCancelEdit={handleCancelEdit}
+                                            onUpdateName={handleUpdateCategoryName}
+                                            onDelete={handleDeleteCategory}
+                                            onUpdateRecord={handleUpdateRecord}
                                             isFirst={index === 0}
-                                            isVariable={false}
                                         />
                                     );
                                 })}
@@ -543,6 +609,16 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                                     />
                                 ))}
                             </div>
+                            <div className="mt-2 px-2">
+                                <Input
+                                    icon={<Icon name="plus" className="w-4 h-4 text-gray-400"/>}
+                                    placeholder="Adicionar entrada e pressionar Enter"
+                                    value={newIncomeCatName}
+                                    onChange={e => setNewIncomeCatName(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') handleAddCategory('income'); }}
+                                    className="!p-1 !pl-8 bg-transparent border-0 focus:ring-0 w-full h-auto text-sm"
+                                />
+                            </div>
                              <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setAdjustmentModalState({isOpen: true, type: 'income'})}>
                                 <Icon name="plus" className="w-4 h-4 mr-1"/> Adicionar Variável
                             </Button>
@@ -553,18 +629,21 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                                 {expenseCategories.map((cat) => {
                                     const record = state.records.find(r => r.categoryId === cat.id && r.month === currentMonth);
                                     const projectedValue = derivedData.projectedPlaceholders.get(cat.id) || 0;
-                                    const valueToDisplay = record ? record.value : projectedValue;
                                     return (
-                                        <RecordRow 
-                                            key={cat.id} 
-                                            id={cat.id}
-                                            label={cat.name}
-                                            value={valueToDisplay}
-                                            status={record?.status ?? 'pending'}
-                                            isProjected={!record} 
-                                            onUpdate={handleUpdateRecord} 
+                                        <FixedCategoryRow
+                                            key={cat.id}
+                                            cat={cat}
+                                            record={record}
+                                            projectedValue={projectedValue}
+                                            isEditing={editingCatId === cat.id}
+                                            editingName={editingCatName}
+                                            onNameChange={setEditingCatName}
+                                            onStartEdit={handleStartEdit}
+                                            onCancelEdit={handleCancelEdit}
+                                            onUpdateName={handleUpdateCategoryName}
+                                            onDelete={handleDeleteCategory}
+                                            onUpdateRecord={handleUpdateRecord}
                                             isFirst={false}
-                                            isVariable={false}
                                         />
                                     );
                                 })}
@@ -583,6 +662,16 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                                         isVariable={true}
                                     />
                                 ))}
+                            </div>
+                             <div className="mt-2 px-2">
+                                <Input
+                                    icon={<Icon name="plus" className="w-4 h-4 text-gray-400"/>}
+                                    placeholder="Adicionar saída e pressionar Enter"
+                                    value={newExpenseCatName}
+                                    onChange={e => setNewExpenseCatName(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') handleAddCategory('expense'); }}
+                                    className="!p-1 !pl-8 bg-transparent border-0 focus:ring-0 w-full h-auto text-sm"
+                                />
                             </div>
                             <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setAdjustmentModalState({isOpen: true, type: 'expense'})}>
                                 <Icon name="plus" className="w-4 h-4 mr-1"/> Adicionar Variável
@@ -605,7 +694,6 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
             </div>
 
             {/* Modals */}
-            <CategorySettingsModal isOpen={isCategoryModalOpen} onClose={() => setCategoryModalOpen(false)} categories={state.categories} onUpdate={handleUpdateCategories} />
             <DistributeBalanceModal isOpen={isDistributeModalOpen} onClose={() => setDistributeModalOpen(false)} state={state} setState={setState} actualBalance={state.checkingAccountBalance} />
             <WealthSettingsModal isOpen={isWealthSettingsModalOpen} onClose={() => setWealthSettingsModalOpen(false)} state={state} setState={setState} />
             {adjustmentModalState.isOpen && (
