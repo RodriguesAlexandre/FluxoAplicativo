@@ -295,13 +295,14 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
 
     const handleSaveGoal = (goal: FinancialGoal) => {
         setState(prev => {
-            const existingIndex = prev.financialGoals.findIndex(g => g.id === goal.id);
+            const goals = prev.financialGoals || [];
+            const existingIndex = goals.findIndex(g => g.id === goal.id);
             if (existingIndex > -1) {
-                const newGoals = [...prev.financialGoals];
+                const newGoals = [...goals];
                 newGoals[existingIndex] = goal;
                 return { ...prev, financialGoals: newGoals };
             } else {
-                return { ...prev, financialGoals: [...prev.financialGoals, goal] };
+                return { ...prev, financialGoals: [...goals, goal] };
             }
         });
         setGoalModalState({ isOpen: false });
@@ -310,7 +311,7 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
     const handleDeleteGoal = (goalId: string) => {
         setState(prev => ({
             ...prev,
-            financialGoals: prev.financialGoals.filter(g => g.id !== goalId)
+            financialGoals: (prev.financialGoals || []).filter(g => g.id !== goalId)
         }));
     };
 
@@ -331,6 +332,8 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
         }
         return result;
     };
+
+    const financialGoals = state.financialGoals || [];
 
     return (
         <div className="p-4 sm:p-6 space-y-6">
@@ -405,9 +408,9 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
                             Adicionar Meta
                         </Button>
                     </div>
-                    {state.financialGoals.length > 0 ? (
+                    {financialGoals.length > 0 ? (
                         <div className="space-y-6">
-                            {state.financialGoals.map(goal => {
+                            {financialGoals.map(goal => {
                                 const monthsToGoal = calculateGoalProjection(goal, state.investments.settings.monthlyInterestRate);
                                 const percentage = goal.targetValue > 0 ? (goal.currentValue / goal.targetValue) * 100 : 0;
                                 return (
