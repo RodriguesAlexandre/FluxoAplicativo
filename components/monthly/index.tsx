@@ -5,6 +5,7 @@ import { MonthlyCashflowChart } from '../charts/index.tsx';
 import { calculateProjections, addMonths } from '../../services/financialProjection';
 import { DistributeBalanceModal } from './DistributeBalanceModal';
 import { WealthSettingsModal } from '../wealth/WealthSettingsModal';
+import { AdjustmentModal } from './AdjustmentModal';
 
 // --- Helper Functions ---
 const getMonthName = (monthStr: string) => new Date(monthStr + '-02').toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
@@ -62,10 +63,11 @@ const RecordRow: React.FC<{
     status: 'pending' | 'confirmed';
     onUpdate: (id: string, value: number, status: 'pending' | 'confirmed') => void;
     onDelete?: (id: string) => void;
+    onEdit?: (id: string) => void;
     isProjected: boolean;
     isFirst: boolean;
     isVariable: boolean;
-}> = ({ id, label, value, status, onUpdate, onDelete, isProjected, isFirst, isVariable }) => {
+}> = ({ id, label, value, status, onUpdate, onDelete, onEdit, isProjected, isFirst, isVariable }) => {
     const [inputValue, setInputValue] = useState(value.toString());
 
     useEffect(() => {
@@ -114,10 +116,19 @@ const RecordRow: React.FC<{
                     aria-label={`Valor para ${label}`}
                 />
             </div>
-            {onDelete && (
-                <button onClick={() => onDelete(id)} aria-label={`Deletar ${label}`} className="opacity-0 group-hover:opacity-100 transition-opacity w-5">
-                    <Icon name="trash" className="w-4 h-4 text-red-500 hover:text-red-700"/>
-                </button>
+            {(onDelete || onEdit) && (
+                 <div className="flex items-center gap-1 w-10 justify-end">
+                    {onEdit && (
+                        <button onClick={() => onEdit(id)} aria-label={`Editar ${label}`} className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Icon name="edit" className="w-4 h-4 text-blue-500 hover:text-blue-700"/>
+                        </button>
+                    )}
+                    {onDelete && (
+                        <button onClick={() => onDelete(id)} aria-label={`Deletar ${label}`} className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Icon name="trash" className="w-4 h-4 text-red-500 hover:text-red-700"/>
+                        </button>
+                    )}
+                </div>
             )}
         </div>
     );
@@ -132,14 +143,35 @@ const CategorySettingsModal: React.FC<{
     const [categories, setCategories] = useState(initialCategories);
     const [newCatName, setNewCatName] = useState('');
     const [newCatType, setNewCatType] = useState<'income' | 'expense'>('expense');
+    const [editingCatId, setEditingCatId] = useState<string | null>(null);
+    const [editingCatName, setEditingCatName] = useState('');
 
     React.useEffect(() => {
-        setCategories(initialCategories);
+        if (isOpen) {
+            setCategories(initialCategories);
+            setEditingCatId(null);
+        }
     }, [initialCategories, isOpen]);
 
     const handleSave = () => {
         onUpdate(categories);
         onClose();
+    };
+    
+    const handleStartEdit = (cat: Category) => {
+        setEditingCatId(cat.id);
+        setEditingCatName(cat.name);
+    }
+    
+    const handleCancelEdit = () => {
+        setEditingCatId(null);
+        setEditingCatName('');
+    }
+
+    const handleUpdateCatName = (id: string) => {
+        if (!editingCatName.trim()) return;
+        setCategories(cats => cats.map(c => c.id === id ? { ...c, name: editingCatName.trim() } : c));
+        handleCancelEdit();
     };
 
     const addCategory = () => {
@@ -156,6 +188,28 @@ const CategorySettingsModal: React.FC<{
     const removeCategory = (id: string) => {
         setCategories(categories.filter(c => c.id !== id));
     };
+
+    const renderCategoryList = (list: Category[]) => (
+        list.map(cat => (
+            <div key={cat.id} className="group flex justify-between items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+                {editingCatId === cat.id ? (
+                    <Input 
+                        value={editingCatName}
+                        onChange={(e) => setEditingCatName(e.target.value)}
+                        onBlur={() => handleUpdateCatName(cat.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleUpdateCatName(cat.id); if (e.key === 'Escape') handleCancelEdit(); }}
+                        autoFocus
+                    />
+                ) : (
+                    <span>{cat.name}</span>
+                )}
+                <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => editingCatId === cat.id ? handleCancelEdit() : handleStartEdit(cat)}><Icon name={editingCatId === cat.id ? 'close' : 'edit'} className="w-4 h-4 text-gray-500"/></Button>
+                    <Button variant="ghost" size="sm" onClick={() => removeCategory(cat.id)}><Icon name="trash" className="w-4 h-4 text-red-500"/></Button>
+                </div>
+            </div>
+        ))
+    );
 
     const incomeCategories = categories.filter(c => c.type === 'income');
     const expenseCategories = categories.filter(c => c.type === 'expense');
@@ -175,21 +229,11 @@ const CategorySettingsModal: React.FC<{
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                     <h3 className="font-bold text-lg text-green-600">Entradas</h3>
-                    {incomeCategories.map(cat => (
-                        <div key={cat.id} className="flex justify-between items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
-                            <span>{cat.name}</span>
-                            <Button variant="ghost" size="sm" onClick={() => removeCategory(cat.id)}><Icon name="trash" className="w-4 h-4 text-red-500"/></Button>
-                        </div>
-                    ))}
+                    {renderCategoryList(incomeCategories)}
                 </div>
                  <div className="space-y-2">
                     <h3 className="font-bold text-lg text-red-600">Saídas</h3>
-                    {expenseCategories.map(cat => (
-                        <div key={cat.id} className="flex justify-between items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
-                            <span>{cat.name}</span>
-                            <Button variant="ghost" size="sm" onClick={() => removeCategory(cat.id)}><Icon name="trash" className="w-4 h-4 text-red-500"/></Button>
-                        </div>
-                    ))}
+                    {renderCategoryList(expenseCategories)}
                 </div>
             </div>
             <div className="mt-6 flex justify-end gap-2">
@@ -199,68 +243,6 @@ const CategorySettingsModal: React.FC<{
         </Modal>
     );
 };
-
-const AdjustmentModal: React.FC<{
-    isOpen: boolean;
-    onClose: () => void;
-    onSave: (data: Omit<MonthlyAdjustment, 'id' | 'startMonth' | 'status'>) => void;
-    type: 'income' | 'expense';
-    currentMonth: string;
-}> = ({ isOpen, onClose, onSave, type, currentMonth }) => {
-    const [description, setDescription] = useState('');
-    const [value, setValue] = useState('');
-    const [endMonth, setEndMonth] = useState('');
-
-    useEffect(() => {
-        if (isOpen) {
-            setDescription('');
-            setValue('');
-            setEndMonth('');
-        }
-    }, [isOpen]);
-
-    const handleSave = () => {
-        const numericValue = parseFloat(value);
-        if (!description.trim() || isNaN(numericValue) || numericValue <= 0) {
-            alert("Por favor, preencha a descrição e um valor válido.");
-            return;
-        }
-
-        onSave({
-            description: description.trim(),
-            value: Math.abs(numericValue),
-            endMonth: endMonth || null,
-            type,
-        });
-        
-        onClose();
-    };
-
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Adicionar ${type === 'income' ? 'Entrada' : 'Saída'} Variável`}>
-            <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
-                <div>
-                    <label htmlFor="adj-desc" className="block text-sm font-medium">Descrição</label>
-                    <Input id="adj-desc" type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Ex: Parcela do Notebook" required/>
-                </div>
-                <div>
-                    <label htmlFor="adj-value" className="block text-sm font-medium">Valor (R$)</label>
-                    <Input id="adj-value" type="number" value={value} onChange={e => setValue(e.target.value)} placeholder="150.00" required/>
-                </div>
-                <div>
-                    <label htmlFor="adj-end" className="block text-sm font-medium">Mês de Término (Opcional)</label>
-                    <Input id="adj-end" type="month" value={endMonth} onChange={e => setEndMonth(e.target.value)} min={currentMonth}/>
-                    <p className="text-xs text-gray-500 mt-1">Deixe em branco se for um lançamento único para este mês.</p>
-                </div>
-                <div className="flex justify-end gap-2 pt-4">
-                    <Button variant="secondary" type="button" onClick={onClose}>Cancelar</Button>
-                    <Button type="submit">Salvar</Button>
-                </div>
-            </form>
-        </Modal>
-    );
-};
-
 
 // --- Main View ---
 interface MonthlyControlViewProps {
@@ -278,7 +260,8 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
     const [isCategoryModalOpen, setCategoryModalOpen] = useState(false);
     const [isDistributeModalOpen, setDistributeModalOpen] = useState(false);
     const [isWealthSettingsModalOpen, setWealthSettingsModalOpen] = useState(false);
-    const [adjustmentModal, setAdjustmentModal] = useState<{ isOpen: boolean; type: 'income' | 'expense' }>({ isOpen: false, type: 'income' });
+    const [adjustmentModalState, setAdjustmentModalState] = useState<{ isOpen: boolean; type: 'income' | 'expense', adjustmentToEdit?: MonthlyAdjustment }>({ isOpen: false, type: 'income' });
+
 
     const derivedData = useMemo(() => {
         if (!state) return {
@@ -410,14 +393,17 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
         setState(prev => prev ? ({...prev, categories: newCategories}) : null);
     };
     
-    const handleAddAdjustment = (data: Omit<MonthlyAdjustment, 'id' | 'startMonth' | 'status'>) => {
-        setState(prev => prev ? ({
-            ...prev,
-            monthlyAdjustments: [
-                ...prev.monthlyAdjustments,
-                { ...data, id: `adj_${new Date().getTime()}`, startMonth: currentMonth, status: 'pending' }
-            ]
-        }) : null)
+    const handleSaveAdjustment = (data: Omit<MonthlyAdjustment, 'id' | 'startMonth' | 'status'>, id?: string) => {
+        setState(prev => {
+            if (!prev) return prev;
+            if (id) { // Editing existing
+                 const newAdjustments = prev.monthlyAdjustments.map(adj => adj.id === id ? {...adj, ...data} : adj);
+                 return { ...prev, monthlyAdjustments: newAdjustments };
+            } else { // Creating new
+                const newAdjustment: MonthlyAdjustment = { ...data, id: `adj_${new Date().getTime()}`, startMonth: currentMonth, status: 'pending' };
+                return { ...prev, monthlyAdjustments: [...prev.monthlyAdjustments, newAdjustment] };
+            }
+        })
     };
     
     const handleDeleteAdjustment = (id: string) => {
@@ -551,12 +537,13 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                                         isProjected={false}
                                         onUpdate={handleUpdateAdjustment}
                                         onDelete={handleDeleteAdjustment}
+                                        onEdit={() => setAdjustmentModalState({isOpen: true, type: 'income', adjustmentToEdit: adj})}
                                         isFirst={false}
                                         isVariable={true}
                                     />
                                 ))}
                             </div>
-                             <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setAdjustmentModal({isOpen: true, type: 'income'})}>
+                             <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setAdjustmentModalState({isOpen: true, type: 'income'})}>
                                 <Icon name="plus" className="w-4 h-4 mr-1"/> Adicionar Variável
                             </Button>
                         </Card>
@@ -591,12 +578,13 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                                         isProjected={false}
                                         onUpdate={handleUpdateAdjustment}
                                         onDelete={handleDeleteAdjustment}
+                                        onEdit={() => setAdjustmentModalState({isOpen: true, type: 'expense', adjustmentToEdit: adj})}
                                         isFirst={false}
                                         isVariable={true}
                                     />
                                 ))}
                             </div>
-                            <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setAdjustmentModal({isOpen: true, type: 'expense'})}>
+                            <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setAdjustmentModalState({isOpen: true, type: 'expense'})}>
                                 <Icon name="plus" className="w-4 h-4 mr-1"/> Adicionar Variável
                             </Button>
                         </Card>
@@ -620,7 +608,16 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
             <CategorySettingsModal isOpen={isCategoryModalOpen} onClose={() => setCategoryModalOpen(false)} categories={state.categories} onUpdate={handleUpdateCategories} />
             <DistributeBalanceModal isOpen={isDistributeModalOpen} onClose={() => setDistributeModalOpen(false)} state={state} setState={setState} actualBalance={state.checkingAccountBalance} />
             <WealthSettingsModal isOpen={isWealthSettingsModalOpen} onClose={() => setWealthSettingsModalOpen(false)} state={state} setState={setState} />
-            <AdjustmentModal isOpen={adjustmentModal.isOpen} onClose={() => setAdjustmentModal({ isOpen: false, type: 'income'})} onSave={handleAddAdjustment} type={adjustmentModal.type} currentMonth={currentMonth} />
+            {adjustmentModalState.isOpen && (
+              <AdjustmentModal
+                  isOpen={adjustmentModalState.isOpen}
+                  onClose={() => setAdjustmentModalState({ isOpen: false, type: 'income' })}
+                  onSave={handleSaveAdjustment}
+                  type={adjustmentModalState.type}
+                  currentMonth={currentMonth}
+                  adjustmentToEdit={adjustmentModalState.adjustmentToEdit}
+              />
+            )}
         </div>
     );
 };

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 
 // --- Monthly Cashflow Chart (Bar Chart) ---
@@ -155,7 +154,10 @@ export const MonthlyCashflowChart: React.FC<MonthlyCashflowChartProps> = ({ data
             fill={bar.value >= 0 ? "url(#gradient-green)" : "url(#gradient-red)"}
             rx="4"
             className="transition-opacity duration-200"
-            style={{ opacity: tooltip && tooltip.activeBar !== bar.fullMonth ? 0.5 : 1 }}
+            style={{ 
+                opacity: tooltip && tooltip.activeBar !== bar.fullMonth ? 0.5 : 1,
+                transition: 'y 500ms ease-out, height 500ms ease-out',
+            }}
           />
         ))}
       </svg>

@@ -6,7 +6,7 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
 }
 export const Card: React.FC<CardProps> = ({ children, className = '', ...props }) => (
-  <div className={`bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-md ${className}`} {...props}>
+  <div className={`bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${className}`} {...props}>
     {children}
   </div>
 );
@@ -18,7 +18,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ({ children, className = '', variant = 'primary', size = 'md', ...props }, ref) => {
-        const baseStyles = 'font-bold rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200 inline-flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed';
+        const baseStyles = 'font-bold rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200 inline-flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed active:scale-95';
         const sizeStyles = {
             sm: 'py-1 px-2 text-sm',
             md: 'py-2 px-4 text-base',
@@ -75,8 +75,8 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, title }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 animate-[fade-in_200ms_ease-out]" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col animate-[fade-in-down_300ms_ease-out]" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 id="modal-title" className="text-xl font-bold text-gray-800 dark:text-gray-100">{title}</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition" aria-label="Fechar modal">

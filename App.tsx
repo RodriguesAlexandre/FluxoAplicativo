@@ -31,7 +31,8 @@ const AppHeader: React.FC<{
     isSimulating: boolean;
     theme: Theme;
     setTheme: (theme: Theme) => void;
-}> = ({ activeView, onSetView, onOpenHelp, onOpenReset, user, onSignOut, onLinkAccount, isSimulating, theme, setTheme }) => {
+    isScrolled: boolean;
+}> = ({ activeView, onSetView, onOpenHelp, onOpenReset, user, onSignOut, onLinkAccount, isSimulating, theme, setTheme, isScrolled }) => {
     const [isMenuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     
@@ -67,7 +68,7 @@ const AppHeader: React.FC<{
     );
 
     return (
-        <header data-tour-id="app-header" className="sticky top-0 z-30 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700">
+        <header data-tour-id="app-header" className={`sticky top-0 z-30 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 transition-shadow ${isScrolled ? 'shadow-md' : ''}`}>
             <div className="flex justify-between items-center h-16 px-4 sm:px-6">
                 <div className="flex items-center gap-2">
                     <div className="p-2 rounded-lg bg-blue-600 text-white"><Icon name="logo" /></div>
@@ -146,11 +147,22 @@ const AuthenticatedApp: React.FC<{ user: FirebaseUser, onSignOut: () => void, on
     const [simulationState, setSimulationState] = useState<FinancialState | null>(null);
     const [isTourActive, setIsTourActive] = useState(false);
     const [tourStepIndex, setTourStepIndex] = useState(0);
+    const [headerScrolled, setHeaderScrolled] = useState(false);
 
     const isSimulating = simulationState !== null;
     const isFirstVisit = financialState && !financialState.hasSeenWelcomeGuide;
     const isNewUserSetup = isFirstVisit && financialState.checkingAccountBalance === 0 && financialState.records.length === 0 && user.isAnonymous;
 
+    useEffect(() => {
+        const mainElement = document.querySelector('main');
+        if (!mainElement) return;
+
+        const handleScroll = () => {
+            setHeaderScrolled(mainElement.scrollTop > 10);
+        };
+        mainElement.addEventListener('scroll', handleScroll);
+        return () => mainElement.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const handleStartSimulation = () => {
         if (financialState) {
@@ -303,29 +315,32 @@ const AuthenticatedApp: React.FC<{ user: FirebaseUser, onSignOut: () => void, on
                 isSimulating={isSimulating}
                 theme={theme}
                 setTheme={setTheme}
+                isScrolled={headerScrolled}
             />
             <main className="flex-1 overflow-y-auto bg-gray-100 dark:bg-gray-900 flex flex-col">
-                <Suspense fallback={<ViewLoader />}>
-                    {activeView === 'monthly' && (
-                        <MonthlyControlView
-                            state={isSimulating ? simulationState! : financialState}
-                            setState={isSimulating ? setSafeSimulationState : setSafeFinancialState}
-                            setAppView={setActiveView}
-                            onOpenOracle={() => setOracleOpen(true)}
-                            isSimulating={isSimulating}
-                            onStartSimulation={handleStartSimulation}
-                            onSaveChanges={handleSaveChanges}
-                            onDiscardChanges={handleDiscardChanges}
-                        />
-                    )}
-                    {activeView === 'wealth' && (
-                        <WealthPlanningView
-                            state={financialState}
-                            setState={setSafeFinancialState}
-                            setAppView={setActiveView}
-                        />
-                    )}
-                </Suspense>
+                 <div className="flex-1 flex flex-col animate-[fade-in_400ms_ease-out]" key={activeView}>
+                    <Suspense fallback={<ViewLoader />}>
+                        {activeView === 'monthly' && (
+                            <MonthlyControlView
+                                state={isSimulating ? simulationState! : financialState}
+                                setState={isSimulating ? setSafeSimulationState : setSafeFinancialState}
+                                setAppView={setActiveView}
+                                onOpenOracle={() => setOracleOpen(true)}
+                                isSimulating={isSimulating}
+                                onStartSimulation={handleStartSimulation}
+                                onSaveChanges={handleSaveChanges}
+                                onDiscardChanges={handleDiscardChanges}
+                            />
+                        )}
+                        {activeView === 'wealth' && (
+                            <WealthPlanningView
+                                state={financialState}
+                                setState={setSafeFinancialState}
+                                setAppView={setActiveView}
+                            />
+                        )}
+                    </Suspense>
+                </div>
                  {/* Floating Action Button for Help */}
                 <Button 
                     variant="primary" 
