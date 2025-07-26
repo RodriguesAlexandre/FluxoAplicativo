@@ -333,6 +333,7 @@ export const WealthPlanningView: React.FC<WealthPlanningViewProps> = ({ state, s
         return result;
     };
 
+    // BUG FIX: Ensure financialGoals is always an array to prevent crashes for old user data structures.
     const financialGoals = state.financialGoals || [];
 
     return (
