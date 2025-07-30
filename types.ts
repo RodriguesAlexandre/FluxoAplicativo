@@ -1,11 +1,13 @@
+
 export interface Category {
   id: string;
   name: string;
   type: 'income' | 'expense';
+  order: number;
 }
 
 export interface Record {
-  id: string;
+  id:string;
   categoryId: string;
   month: string; // "YYYY-MM"
   value: number;
@@ -20,6 +22,7 @@ export interface MonthlyAdjustment {
     endMonth: string | null;
     type: 'income' | 'expense';
     status: 'pending' | 'confirmed';
+    order: number;
 }
 
 export interface Asset {

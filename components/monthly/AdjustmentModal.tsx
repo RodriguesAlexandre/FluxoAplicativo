@@ -43,6 +43,7 @@ export const AdjustmentModal: React.FC<AdjustmentModalProps> = ({ isOpen, onClos
                 value: Math.abs(numericValue),
                 endMonth: endMonth || null,
                 type,
+                order: adjustmentToEdit?.order ?? 0,
             },
             adjustmentToEdit?.id
         );

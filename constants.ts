@@ -1,14 +1,15 @@
+
 import { FinancialState, Category } from './types';
 
 const defaultCategories: Category[] = [
-    { id: 'sal', name: 'Salário', type: 'income' },
-    { id: 'freela', name: 'Freelance', type: 'income' },
-    { id: 'rent', name: 'Aluguel', type: 'expense' },
-    { id: 'supermarket', name: 'Supermercado', type: 'expense' },
-    { id: 'transport', name: 'Transporte', type: 'expense' },
-    { id: 'leisure', name: 'Lazer', type: 'expense' },
-    { id: 'health', name: 'Saúde', type: 'expense' },
-    { id: 'utilities', name: 'Contas (Luz, Água, Net)', type: 'expense' },
+    { id: 'sal', name: 'Salário', type: 'income', order: 0 },
+    { id: 'freela', name: 'Freelance', type: 'income', order: 1 },
+    { id: 'rent', name: 'Aluguel', type: 'expense', order: 0 },
+    { id: 'supermarket', name: 'Supermercado', type: 'expense', order: 1 },
+    { id: 'transport', name: 'Transporte', type: 'expense', order: 2 },
+    { id: 'leisure', name: 'Lazer', type: 'expense', order: 3 },
+    { id: 'health', name: 'Saúde', type: 'expense', order: 4 },
+    { id: 'utilities', name: 'Contas (Luz, Água, Net)', type: 'expense', order: 5 },
 ];
 
 export const INITIAL_FINANCIAL_STATE: FinancialState = {

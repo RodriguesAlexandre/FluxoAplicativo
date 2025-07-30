@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { FinancialState, Category, Record as RecordType, AppView, MonthlyAdjustment } from '../../types';
 import { Card, Button, Icon, Input, Modal } from '../common/index.tsx';
@@ -11,6 +12,11 @@ import { AdjustmentModal } from './AdjustmentModal';
 const getMonthName = (monthStr: string) => new Date(monthStr + '-02').toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
+type UnifiedEntry = {
+    id: string;
+    item: Category | MonthlyAdjustment;
+    type: 'category' | 'adjustment';
+};
 
 // --- Sub-Components ---
 const SimulationBar: React.FC<{onSave: () => void; onDiscard: () => void}> = ({ onSave, onDiscard }) => (
@@ -99,6 +105,9 @@ const FixedCategoryRow: React.FC<{
 
     return (
         <div className={`group flex items-center gap-2 p-2 rounded-lg transition-colors ${isConfirmed ? 'bg-green-50 dark:bg-green-900/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700/50'}`}>
+            <div className="text-gray-400 cursor-grab touch-none" aria-label="Arraste para reordenar">
+                <Icon name="grip-vertical" className="w-5 h-5"/>
+            </div>
             <button
                 onClick={toggleStatus}
                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${isConfirmed ? 'bg-green-500 border-green-500' : 'border-gray-400'}`}
@@ -153,23 +162,23 @@ const FixedCategoryRow: React.FC<{
     );
 };
 
-const RecordRow: React.FC<{
-    id: string;
-    label: string;
-    value: number;
-    status: 'pending' | 'confirmed';
-    onUpdate: (id: string, value: number, status: 'pending' | 'confirmed') => void;
-    onDelete?: (id: string) => void;
-    onEdit?: (id: string) => void;
-    isProjected: boolean;
-    isFirst: boolean;
-    isVariable: boolean;
-}> = ({ id, label, value, status, onUpdate, onDelete, onEdit, isProjected, isFirst, isVariable }) => {
-    const [inputValue, setInputValue] = useState(value.toString());
+const AdjustmentRow: React.FC<{
+    adj: MonthlyAdjustment;
+    isEditing: boolean;
+    editingDesc: string;
+    onDescChange: (newDesc: string) => void;
+    onStartEdit: (adj: MonthlyAdjustment) => void;
+    onUpdateDesc: (id: string) => void;
+    onCancelEdit: () => void;
+    onUpdateValue: (id: string, value: number, status: 'pending' | 'confirmed') => void;
+    onDelete: (id: string) => void;
+    onOpenAdvancedEdit: (adj: MonthlyAdjustment) => void;
+}> = ({ adj, isEditing, editingDesc, onDescChange, onStartEdit, onUpdateDesc, onCancelEdit, onUpdateValue, onDelete, onOpenAdvancedEdit }) => {
+    const [inputValue, setInputValue] = useState(adj.value.toString());
 
     useEffect(() => {
-        setInputValue(value.toString());
-    }, [value]);
+        setInputValue(adj.value.toString());
+    }, [adj.value]);
 
     const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setInputValue(e.target.value);
@@ -178,29 +187,63 @@ const RecordRow: React.FC<{
     const handleBlur = () => {
         const numericValue = parseFloat(inputValue);
         if (!isNaN(numericValue)) {
-            onUpdate(id, numericValue, status);
+            onUpdateValue(adj.id, numericValue, adj.status);
         } else if (inputValue === '') {
-             onUpdate(id, 0, status);
+             onUpdateValue(adj.id, 0, adj.status);
         }
     };
 
     const toggleStatus = () => {
-        onUpdate(id, value, status === 'confirmed' ? 'pending' : 'confirmed');
+        onUpdateValue(adj.id, adj.value, adj.status === 'confirmed' ? 'pending' : 'confirmed');
     };
     
-    const isConfirmed = status === 'confirmed';
+    const isConfirmed = adj.status === 'confirmed';
+
+    const EndDatePart: React.FC = () => {
+        if (!adj.endMonth) return null;
+        const endDate = new Date(adj.endMonth + '-02');
+        const formattedDate = endDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+        return (
+            <button 
+                onClick={() => onOpenAdvancedEdit(adj)} 
+                className="ml-1 text-gray-400 text-xs hover:underline focus:outline-none focus:ring-1 focus:ring-blue-500 rounded px-1 disabled:cursor-not-allowed disabled:no-underline"
+                aria-label={`Editar detalhes avançados de ${adj.description}`}
+                disabled={isConfirmed}
+            >
+                (até {formattedDate})
+            </button>
+        );
+    };
 
     return (
         <div className={`group flex items-center gap-2 p-2 rounded-lg transition-colors ${isConfirmed ? 'bg-green-50 dark:bg-green-900/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700/50'}`}>
+            <div className="text-gray-400 cursor-grab touch-none" aria-label="Arraste para reordenar">
+                <Icon name="grip-vertical" className="w-5 h-5"/>
+            </div>
             <button 
                 onClick={toggleStatus} 
                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${isConfirmed ? 'bg-green-500 border-green-500' : 'border-gray-400'}`} 
                 aria-label={isConfirmed ? 'Marcar como pendente' : 'Marcar como confirmado'}
-                data-tour-id={isFirst ? 'confirmar-transacao' : undefined}
             >
                 {isConfirmed && <Icon name="check" className="w-4 h-4 text-white" />}
             </button>
-            <span className={`flex-1 ${isConfirmed ? 'opacity-60' : ''} ${isVariable ? 'italic' : ''}`} dangerouslySetInnerHTML={{ __html: label }}></span>
+            <div className="flex-1 flex items-baseline">
+                {isEditing ? (
+                    <Input
+                        value={editingDesc}
+                        onChange={(e) => onDescChange(e.target.value)}
+                        onBlur={() => onUpdateDesc(adj.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') onUpdateDesc(adj.id); if (e.key === 'Escape') onCancelEdit(); }}
+                        autoFocus
+                        className="py-1 h-8"
+                    />
+                ) : (
+                    <>
+                        <span className={`flex-shrink-0 ${isConfirmed ? 'opacity-60' : ''} italic`}>{adj.description}</span>
+                        <EndDatePart />
+                    </>
+                )}
+            </div>
             <div className="flex items-center gap-2 w-32">
                  <span className={`text-sm ${isConfirmed ? 'opacity-60' : 'text-gray-500 dark:text-gray-400'}`}>R$</span>
                 <input
@@ -209,24 +252,23 @@ const RecordRow: React.FC<{
                     onChange={handleValueChange}
                     onBlur={handleBlur}
                     placeholder="0.00"
-                    className={`w-full text-right bg-transparent outline-none font-semibold ${isProjected && !isConfirmed ? 'text-gray-400 italic' : ''} ${isConfirmed ? 'opacity-60' : ''}`}
-                    aria-label={`Valor para ${label}`}
+                    className={`w-full text-right bg-transparent outline-none font-semibold ${isConfirmed ? 'opacity-60' : ''}`}
+                    aria-label={`Valor para ${adj.description}`}
+                    disabled={isEditing}
                 />
             </div>
-            {(onDelete || onEdit) && (
-                 <div className="flex items-center gap-1 w-10 justify-end">
-                    {onEdit && (
-                        <button onClick={() => onEdit(id)} aria-label={`Editar ${label}`} className="opacity-0 group-hover:opacity-100 transition-opacity">
+             <div className="flex items-center gap-1 w-12 justify-end">
+                {!isEditing && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => onStartEdit(adj)} aria-label={`Editar ${adj.description}`} disabled={isConfirmed}>
                             <Icon name="edit" className="w-4 h-4 text-blue-500 hover:text-blue-700"/>
                         </button>
-                    )}
-                    {onDelete && (
-                        <button onClick={() => onDelete(id)} aria-label={`Deletar ${label}`} className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => onDelete(adj.id)} aria-label={`Deletar ${adj.description}`}>
                             <Icon name="trash" className="w-4 h-4 text-red-500 hover:text-red-700"/>
                         </button>
-                    )}
-                </div>
-            )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
@@ -248,11 +290,17 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
     const [isWealthSettingsModalOpen, setWealthSettingsModalOpen] = useState(false);
     const [adjustmentModalState, setAdjustmentModalState] = useState<{ isOpen: boolean; type: 'income' | 'expense', adjustmentToEdit?: MonthlyAdjustment }>({ isOpen: false, type: 'income' });
     
-    // State for inline category management
+    // --- State for inline editing ---
     const [newIncomeCatName, setNewIncomeCatName] = useState('');
     const [newExpenseCatName, setNewExpenseCatName] = useState('');
     const [editingCatId, setEditingCatId] = useState<string | null>(null);
     const [editingCatName, setEditingCatName] = useState('');
+    const [editingAdjId, setEditingAdjId] = useState<string | null>(null);
+    const [editingAdjDesc, setEditingAdjDesc] = useState('');
+    
+    // --- State for Drag and Drop ---
+    const [draggedEntry, setDraggedEntry] = useState<UnifiedEntry | null>(null);
+    const [dragOverId, setDragOverId] = useState<string | null>(null);
 
 
     const derivedData = useMemo(() => {
@@ -310,6 +358,24 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
         };
 
     }, [state, currentMonth]);
+
+    const { incomeEntries, expenseEntries } = useMemo(() => {
+        if (!state) return { incomeEntries: [], expenseEntries: [] };
+
+        const filterAndMap = (type: 'income' | 'expense') => {
+            const cats: UnifiedEntry[] = state.categories
+                .filter(c => c.type === type)
+                .map(c => ({ id: c.id, item: c, type: 'category' }));
+
+            const adjs: UnifiedEntry[] = state.monthlyAdjustments
+                .filter(a => a.type === type && a.startMonth <= currentMonth && (!a.endMonth || a.endMonth >= currentMonth))
+                .map(a => ({ id: a.id, item: a, type: 'adjustment' }));
+            
+            return [...cats, ...adjs].sort((a, b) => a.item.order - b.item.order);
+        };
+
+        return { incomeEntries: filterAndMap('income'), expenseEntries: filterAndMap('expense') };
+    }, [state.categories, state.monthlyAdjustments, currentMonth]);
     
     const handleUpdateRecord = useCallback((categoryId: string, value: number, status: 'pending' | 'confirmed') => {
         setState(prev => {
@@ -381,8 +447,7 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
         });
     }, [setState]);
     
-    // --- New Category Management Handlers ---
-
+    // --- Category Management Handlers ---
     const handleAddCategory = (type: 'income' | 'expense') => {
         const name = (type === 'income' ? newIncomeCatName : newExpenseCatName).trim();
         if (!name) return;
@@ -394,7 +459,13 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                 return prev;
             }
 
-            const newCategory: Category = { id: `cat_${new Date().getTime()}`, name, type };
+            const newOrder = Math.max(
+                ...prev.categories.filter(c => c.type === type).map(c => c.order),
+                ...prev.monthlyAdjustments.filter(a => a.type === type).map(a => a.order),
+                -1
+            ) + 1;
+
+            const newCategory: Category = { id: `cat_${new Date().getTime()}`, name, type, order: newOrder };
             return { ...prev, categories: [...prev.categories, newCategory] };
         });
 
@@ -432,6 +503,7 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
     const handleStartEdit = (cat: Category) => {
         setEditingCatId(cat.id);
         setEditingCatName(cat.name);
+        setEditingAdjId(null); // Close other editor
     };
 
     const handleCancelEdit = () => {
@@ -460,15 +532,31 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
         handleCancelEdit();
     };
 
-
+    // --- Adjustment (Variable) Management Handlers ---
     const handleSaveAdjustment = (data: Omit<MonthlyAdjustment, 'id' | 'startMonth' | 'status'>, id?: string) => {
         setState(prev => {
             if (!prev) return prev;
+
+            const newDesc = data.description.toLowerCase();
+            const isDuplicate = prev.monthlyAdjustments.some(adj => 
+                (id ? adj.id !== id : true) && adj.description.toLowerCase() === newDesc
+            );
+
+            if (isDuplicate) {
+                alert(`Já existe um ajuste com a descrição "${data.description}".`);
+                return prev;
+            }
+
             if (id) { // Editing existing
                  const newAdjustments = prev.monthlyAdjustments.map(adj => adj.id === id ? {...adj, ...data} : adj);
                  return { ...prev, monthlyAdjustments: newAdjustments };
             } else { // Creating new
-                const newAdjustment: MonthlyAdjustment = { ...data, id: `adj_${new Date().getTime()}`, startMonth: currentMonth, status: 'pending' };
+                 const newOrder = Math.max(
+                    ...prev.categories.filter(c => c.type === data.type).map(c => c.order),
+                    ...prev.monthlyAdjustments.filter(a => a.type === data.type).map(a => a.order),
+                    -1
+                ) + 1;
+                const newAdjustment: MonthlyAdjustment = { ...data, id: `adj_${new Date().getTime()}`, startMonth: currentMonth, status: 'pending', order: newOrder };
                 return { ...prev, monthlyAdjustments: [...prev.monthlyAdjustments, newAdjustment] };
             }
         })
@@ -495,28 +583,154 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
         })
     }
 
+    const handleStartEditAdj = (adj: MonthlyAdjustment) => {
+        setEditingAdjId(adj.id);
+        setEditingAdjDesc(adj.description);
+        setEditingCatId(null); // Close other editor
+    };
+
+    const handleCancelEditAdj = () => {
+        setEditingAdjId(null);
+        setEditingAdjDesc('');
+    };
+
+    const handleUpdateAdjDescription = (adjustmentId: string) => {
+        const newDescription = editingAdjDesc.trim();
+        if (!newDescription) {
+            handleCancelEditAdj();
+            return;
+        }
+
+        setState(prev => {
+            if (!prev) return prev;
+            if (prev.monthlyAdjustments.some(a => a.id !== adjustmentId && a.description.toLowerCase() === newDescription.toLowerCase())) {
+                alert(`Já existe um ajuste com a descrição "${newDescription}".`);
+                return prev;
+            }
+            return {
+                ...prev,
+                monthlyAdjustments: prev.monthlyAdjustments.map(adj => adj.id === adjustmentId ? { ...adj, description: newDescription } : adj),
+            };
+        });
+        handleCancelEditAdj();
+    };
+
     const handleMonthChange = (e: React.MouseEvent<HTMLButtonElement>, direction: 'prev' | 'next') => {
         const newMonth = addMonths(currentMonth, direction === 'prev' ? -1 : 1);
         setCurrentMonth(newMonth);
         e.currentTarget.blur();
     };
-
-    const getAdjustmentLabel = (adj: MonthlyAdjustment) => {
-        let label = adj.description;
-        if (adj.endMonth) {
-            const endDate = new Date(adj.endMonth + '-02');
-            const formattedDate = endDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-            label += ` <span class="text-gray-400 text-xs">(até ${formattedDate})</span>`;
-        }
-        return label;
+    
+    // --- Drag and Drop Handlers ---
+    const handleDragStart = (e: React.DragEvent, entry: UnifiedEntry) => {
+        setDraggedEntry(entry);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', entry.id); // Necessary for Firefox
     };
 
-    const incomeCategories = state.categories.filter(c => c.type === 'income');
-    const expenseCategories = state.categories.filter(c => c.type === 'expense');
+    const handleDragEnd = () => {
+        setDraggedEntry(null);
+        setDragOverId(null);
+    };
     
-    const currentMonthAdjustments = state.monthlyAdjustments.filter(a => 
-        a.startMonth <= currentMonth && (!a.endMonth || a.endMonth >= currentMonth)
+    const handleDrop = (e: React.DragEvent, dropTargetEntry: UnifiedEntry, listType: 'income' | 'expense') => {
+        e.preventDefault();
+        if (!draggedEntry || draggedEntry.id === dropTargetEntry.id) {
+             handleDragEnd();
+             return;
+        }
+
+        const list = listType === 'income' ? incomeEntries : expenseEntries;
+        
+        const reorderedList = [...list];
+        const draggedIndex = reorderedList.findIndex(item => item.id === draggedEntry.id);
+        let targetIndex = reorderedList.findIndex(item => item.id === dropTargetEntry.id);
+        
+        // Remove dragged item and insert it at the target position
+        const [movedItem] = reorderedList.splice(draggedIndex, 1);
+        reorderedList.splice(targetIndex, 0, movedItem);
+
+        // Update state with new orders
+        setState(prev => {
+            if (!prev) return prev;
+            const newCategories = [...prev.categories];
+            const newAdjustments = [...prev.monthlyAdjustments];
+
+            reorderedList.forEach((entry, index) => {
+                const itemToUpdate = entry.item;
+                if (entry.type === 'category') {
+                    const catIndex = newCategories.findIndex(c => c.id === itemToUpdate.id);
+                    if (catIndex > -1) newCategories[catIndex].order = index;
+                } else { // adjustment
+                    const adjIndex = newAdjustments.findIndex(a => a.id === itemToUpdate.id);
+                    if (adjIndex > -1) newAdjustments[adjIndex].order = index;
+                }
+            });
+
+            return { ...prev, categories: newCategories, monthlyAdjustments: newAdjustments };
+        });
+
+        handleDragEnd();
+    };
+
+    const renderEntryList = (entries: UnifiedEntry[], type: 'income' | 'expense') => (
+        <div className="space-y-1">
+            {entries.map((entry, index) => {
+                const isDragging = draggedEntry?.id === entry.id;
+                const showDropIndicator = dragOverId === entry.id && !isDragging;
+
+                const wrapperProps = {
+                    key: entry.id,
+                    draggable: !isSimulating,
+                    onDragStart: (e: React.DragEvent) => handleDragStart(e, entry),
+                    onDragEnd: handleDragEnd,
+                    onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOverId(entry.id); },
+                    onDrop: (e: React.DragEvent) => handleDrop(e, entry, type),
+                    className: `relative transition-opacity ${isDragging ? 'opacity-40' : ''}`
+                };
+
+                const commonProps = {
+                    isFirst: index === 0 && type === 'income',
+                };
+                
+                return (
+                    <div {...wrapperProps}>
+                        {showDropIndicator && <div className="absolute -top-1 left-2 right-2 h-1 bg-blue-500 rounded-full z-10" />}
+                        {entry.type === 'category' ? (
+                            <FixedCategoryRow
+                                {...commonProps}
+                                cat={entry.item as Category}
+                                record={state.records.find(r => r.categoryId === entry.id && r.month === currentMonth)}
+                                projectedValue={derivedData.projectedPlaceholders.get(entry.id) || 0}
+                                isEditing={editingCatId === entry.id}
+                                editingName={editingCatName}
+                                onNameChange={setEditingCatName}
+                                onStartEdit={handleStartEdit}
+                                onCancelEdit={handleCancelEdit}
+                                onUpdateName={handleUpdateCategoryName}
+                                onDelete={handleDeleteCategory}
+                                onUpdateRecord={handleUpdateRecord}
+                            />
+                        ) : (
+                            <AdjustmentRow
+                                adj={entry.item as MonthlyAdjustment}
+                                isEditing={editingAdjId === entry.id}
+                                editingDesc={editingAdjDesc}
+                                onDescChange={setEditingAdjDesc}
+                                onStartEdit={handleStartEditAdj}
+                                onCancelEdit={handleCancelEditAdj}
+                                onUpdateDesc={handleUpdateAdjDescription}
+                                onUpdateValue={handleUpdateAdjustment}
+                                onDelete={handleDeleteAdjustment}
+                                onOpenAdvancedEdit={(adjToEdit) => setAdjustmentModalState({isOpen: true, type, adjustmentToEdit: adjToEdit})}
+                            />
+                        )}
+                    </div>
+                );
+            })}
+        </div>
     );
+    
 
     return (
         <div className="flex-1 flex flex-col">
@@ -571,53 +785,27 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                     <div className="lg:col-span-1 space-y-4 flex flex-col">
                         <Card>
                             <h3 className="text-lg font-bold mb-2 text-green-600">Entradas</h3>
-                            <div className="space-y-1">
-                                {incomeCategories.map((cat, index) => {
-                                    const record = state.records.find(r => r.categoryId === cat.id && r.month === currentMonth);
-                                    const projectedValue = derivedData.projectedPlaceholders.get(cat.id) || 0;
-                                    return (
-                                        <FixedCategoryRow
-                                            key={cat.id}
-                                            cat={cat}
-                                            record={record}
-                                            projectedValue={projectedValue}
-                                            isEditing={editingCatId === cat.id}
-                                            editingName={editingCatName}
-                                            onNameChange={setEditingCatName}
-                                            onStartEdit={handleStartEdit}
-                                            onCancelEdit={handleCancelEdit}
-                                            onUpdateName={handleUpdateCategoryName}
-                                            onDelete={handleDeleteCategory}
-                                            onUpdateRecord={handleUpdateRecord}
-                                            isFirst={index === 0}
-                                        />
-                                    );
-                                })}
-                                {currentMonthAdjustments.filter(adj => adj.type === 'income').map(adj => (
-                                    <RecordRow
-                                        key={adj.id}
-                                        id={adj.id}
-                                        label={getAdjustmentLabel(adj)}
-                                        value={adj.value}
-                                        status={adj.status}
-                                        isProjected={false}
-                                        onUpdate={handleUpdateAdjustment}
-                                        onDelete={handleDeleteAdjustment}
-                                        onEdit={() => setAdjustmentModalState({isOpen: true, type: 'income', adjustmentToEdit: adj})}
-                                        isFirst={false}
-                                        isVariable={true}
-                                    />
-                                ))}
-                            </div>
-                            <div className="mt-2 px-2">
+                            {renderEntryList(incomeEntries, 'income')}
+                            <div className="mt-2 pt-2 px-2 flex items-center gap-2 border-t border-gray-200 dark:border-gray-700">
                                 <Input
                                     icon={<Icon name="plus" className="w-4 h-4 text-gray-400"/>}
-                                    placeholder="Adicionar entrada e pressionar Enter"
+                                    placeholder="Nova categoria fixa"
                                     value={newIncomeCatName}
                                     onChange={e => setNewIncomeCatName(e.target.value)}
-                                    onKeyDown={e => { if (e.key === 'Enter') handleAddCategory('income'); }}
-                                    className="!p-1 !pl-8 bg-transparent border-0 focus:ring-0 w-full h-auto text-sm"
+                                    onKeyDown={e => { if (e.key === 'Enter' && newIncomeCatName.trim()) handleAddCategory('income'); }}
+                                    className="!p-1 !pl-8 bg-transparent border-0 focus:ring-0 w-full h-auto text-sm flex-1"
                                 />
+                                {newIncomeCatName.trim() && (
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleAddCategory('income')}
+                                        aria-label="Adicionar nova categoria de entrada"
+                                        className="animate-[fade-in_150ms_ease-in] shrink-0"
+                                    >
+                                        Adicionar
+                                    </Button>
+                                )}
                             </div>
                              <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setAdjustmentModalState({isOpen: true, type: 'income'})}>
                                 <Icon name="plus" className="w-4 h-4 mr-1"/> Adicionar Variável
@@ -625,53 +813,27 @@ export const MonthlyControlView: React.FC<MonthlyControlViewProps> = ({ state, s
                         </Card>
                         <Card className="flex flex-col flex-grow">
                              <h3 className="text-lg font-bold mb-2 text-red-600">Saídas</h3>
-                            <div className="space-y-1 flex-grow">
-                                {expenseCategories.map((cat) => {
-                                    const record = state.records.find(r => r.categoryId === cat.id && r.month === currentMonth);
-                                    const projectedValue = derivedData.projectedPlaceholders.get(cat.id) || 0;
-                                    return (
-                                        <FixedCategoryRow
-                                            key={cat.id}
-                                            cat={cat}
-                                            record={record}
-                                            projectedValue={projectedValue}
-                                            isEditing={editingCatId === cat.id}
-                                            editingName={editingCatName}
-                                            onNameChange={setEditingCatName}
-                                            onStartEdit={handleStartEdit}
-                                            onCancelEdit={handleCancelEdit}
-                                            onUpdateName={handleUpdateCategoryName}
-                                            onDelete={handleDeleteCategory}
-                                            onUpdateRecord={handleUpdateRecord}
-                                            isFirst={false}
-                                        />
-                                    );
-                                })}
-                                {currentMonthAdjustments.filter(adj => adj.type === 'expense').map(adj => (
-                                    <RecordRow
-                                        key={adj.id}
-                                        id={adj.id}
-                                        label={getAdjustmentLabel(adj)}
-                                        value={adj.value}
-                                        status={adj.status}
-                                        isProjected={false}
-                                        onUpdate={handleUpdateAdjustment}
-                                        onDelete={handleDeleteAdjustment}
-                                        onEdit={() => setAdjustmentModalState({isOpen: true, type: 'expense', adjustmentToEdit: adj})}
-                                        isFirst={false}
-                                        isVariable={true}
-                                    />
-                                ))}
-                            </div>
-                             <div className="mt-2 px-2">
+                            {renderEntryList(expenseEntries, 'expense')}
+                             <div className="mt-2 pt-2 px-2 flex items-center gap-2 border-t border-gray-200 dark:border-gray-700">
                                 <Input
                                     icon={<Icon name="plus" className="w-4 h-4 text-gray-400"/>}
-                                    placeholder="Adicionar saída e pressionar Enter"
+                                    placeholder="Nova categoria fixa"
                                     value={newExpenseCatName}
                                     onChange={e => setNewExpenseCatName(e.target.value)}
-                                    onKeyDown={e => { if (e.key === 'Enter') handleAddCategory('expense'); }}
-                                    className="!p-1 !pl-8 bg-transparent border-0 focus:ring-0 w-full h-auto text-sm"
+                                    onKeyDown={e => { if (e.key === 'Enter' && newExpenseCatName.trim()) handleAddCategory('expense'); }}
+                                    className="!p-1 !pl-8 bg-transparent border-0 focus:ring-0 w-full h-auto text-sm flex-1"
                                 />
+                                 {newExpenseCatName.trim() && (
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleAddCategory('expense')}
+                                        aria-label="Adicionar nova categoria de saída"
+                                        className="animate-[fade-in_150ms_ease-in] shrink-0"
+                                    >
+                                        Adicionar
+                                    </Button>
+                                )}
                             </div>
                             <Button size="sm" variant="ghost" className="w-full mt-2" onClick={() => setAdjustmentModalState({isOpen: true, type: 'expense'})}>
                                 <Icon name="plus" className="w-4 h-4 mr-1"/> Adicionar Variável
